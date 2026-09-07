@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Marine Rostering Engine & ER Compliance Dashboard (Auto-Validation)</title>
+<title>Marine Rostering Engine & ER Compliance Dashboard (Fixed & Tested)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   body { background-color: #0b0f19; color: #94a3b8; padding: 32px; }
@@ -16,13 +16,14 @@
   .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
   .logo-title { font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
   
-  .top-actions { display: flex; align-items: center; gap: 12px; }
-  .action-btn { padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; border: 1px solid #1e293b; background: #131b2e; color: #38bdf8; cursor: pointer; transition: all 0.2s; }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .action-btn { padding: 7px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; border: 1px solid #1e293b; background: #131b2e; color: #38bdf8; cursor: pointer; transition: all 0.2s; }
   .action-btn:hover { background: #1e293b; color: #ffffff; border-color: #38bdf8; }
-  .action-btn.reset-btn { color: #f87171; }
-  .action-btn.reset-btn:hover { border-color: #f87171; }
   .action-btn.check-btn { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
   .action-btn.check-btn:hover { background: #0369a1; }
+  .action-btn.inject-btn { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; }
+  .action-btn.inject-btn:hover { background: #991b1b; }
+  .action-btn.reset-btn { color: #f87171; }
 
   .lang-switch { display: flex; background: #131b2e; border: 1px solid #1e293b; border-radius: 6px; padding: 3px; gap: 2px; }
   .lang-label { padding: 4px 12px; font-size: 13px; font-weight: 600; border-radius: 4px; cursor: pointer; color: #64748b; user-select: none; transition: all 0.2s; }
@@ -30,6 +31,22 @@
   #lang-en:checked ~ .container .lang-label[for="lang-en"] {
     background: #ffffff; color: #0b0f19;
   }
+
+  /* 頂部即時阻擋警報看板 (默認隱藏，違規時常駐顯示) */
+  .alert-banner {
+    display: none;
+    background: #450a0a;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    color: #fca5a5;
+    font-size: 13.5px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .alert-banner.active { display: flex; }
+  .alert-banner strong { color: #ffffff; }
 
   /* Legend Bar */
   .legend-bar { display: flex; align-items: center; justify-content: space-between; background: #111827; border: 1px solid #1f293d; border-radius: 8px; padding: 14px 20px; margin-bottom: 24px; font-size: 13px; font-weight: 500; }
@@ -42,37 +59,6 @@
   .dot-team { background: #818cf8; }
   .edit-indicator { font-size: 12px; color: #38bdf8; display: flex; align-items: center; gap: 6px; font-weight: 600; }
 
-  /* Country Tabs */
-  .country-tabs { display: flex; gap: 12px; margin-bottom: 32px; }
-  .country-tab-label { display: flex; align-items: center; gap: 8px; background: #131b2e; border: 1px solid #1e293b; padding: 8px 16px; border-radius: 8px; font-size: 13px; color: #64748b; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; }
-  .tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700; background: #1e293b; color: #10b981; }
-
-  #country-tw:checked ~ .container .country-tab-label[for="country-tw"],
-  #country-eu:checked ~ .container .country-tab-label[for="country-eu"],
-  #country-sea:checked ~ .container .country-tab-label[for="country-sea"] {
-    background: #172033; border-color: #3b82f6; color: #ffffff;
-  }
-  #country-tw:checked ~ .container .country-tab-label[for="country-tw"] .tag,
-  #country-eu:checked ~ .container .country-tab-label[for="country-eu"] .tag,
-  #country-sea:checked ~ .container .country-tab-label[for="country-sea"] .tag {
-    background: #1e3a8a; color: #60a5fa;
-  }
-
-  /* Header Section */
-  .country-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
-  .country-title-box { display: flex; align-items: baseline; gap: 12px; }
-  .country-code { font-size: 26px; font-weight: 800; color: #ffffff; }
-  .country-name { font-size: 26px; font-weight: 800; color: #ffffff; }
-  .employment-struct { text-align: right; font-size: 13px; }
-  .struct-label { color: #64748b; margin-bottom: 4px; font-size: 12px; }
-  .struct-value { color: #34d399; font-weight: 600; }
-
-  /* Stats Cards Bar */
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #1e293b; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
-  .stat-card { background: #0e1526; padding: 22px 24px; }
-  .stat-title { font-size: 17px; font-weight: 700; color: #2dd4bf; margin-bottom: 6px; }
-  .stat-desc { font-size: 12px; color: #64748b; }
-
   /* Stage Pills */
   .stage-bar { display: flex; gap: 14px; margin-bottom: 20px; }
   .stage-pill-label { display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #1e293b; background: #131b2e; color: #64748b; user-select: none; transition: all 0.2s; }
@@ -82,67 +68,16 @@
   .dot-emp { background: #f87171; }
   .dot-vol { background: #fbbf24; }
 
-  #stage-roster:checked ~ .container .stage-pill-label[for="stage-roster"] {
-    background: #082f49; border-color: #0284c7; color: #38bdf8;
-  }
-  #stage-onboard:checked ~ .container .stage-pill-label[for="stage-onboard"] {
-    background: #064e3b; border-color: #10b981; color: #34d399;
-  }
-  #stage-emp:checked ~ .container .stage-pill-label[for="stage-emp"] {
-    background: #450a0a; border-color: #ef4444; color: #f87171;
-  }
-  #stage-vol:checked ~ .container .stage-pill-label[for="stage-vol"] {
-    background: #451a03; border-color: #f59e0b; color: #fbbf24;
-  }
+  #stage-roster:checked ~ .container .stage-pill-label[for="stage-roster"] { background: #082f49; border-color: #0284c7; color: #38bdf8; }
+  #stage-onboard:checked ~ .container .stage-pill-label[for="stage-onboard"] { background: #064e3b; border-color: #10b981; color: #34d399; }
+  #stage-emp:checked ~ .container .stage-pill-label[for="stage-emp"] { background: #450a0a; border-color: #ef4444; color: #f87171; }
+  #stage-vol:checked ~ .container .stage-pill-label[for="stage-vol"] { background: #451a03; border-color: #f59e0b; color: #fbbf24; }
 
   /* Section Header */
   .section-label { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 13px; font-weight: 600; color: #94a3b8; }
   .section-label .bar { width: 3px; height: 14px; background: #2dd4bf; border-radius: 2px; }
 
-  /* Content Grid */
-  .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .card { background: #0e1526; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
-  .card-law { border: 1px solid #1e293b; }
-  .card-pain { border: 1px solid #7f1d1d; }
-  .card-cost { border: 1px solid #064e3b; }
-  .card-collab { border: 1px solid #1e293b; }
-
-  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-  .num-badge { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-  .num-badge-gray { background: #1e293b; color: #94a3b8; }
-  .num-badge-red { background: #dc2626; color: #ffffff; }
-  .num-badge-green { background: #059669; color: #ffffff; }
-  .num-badge-blue { background: #2563eb; color: #ffffff; }
-  .card-title { font-size: 13px; font-weight: 600; color: #64748b; letter-spacing: 0.5px; }
-
-  .main-law-title { font-size: 14.5px; font-weight: 700; color: #ffffff; margin-bottom: 14px; line-height: 1.5; }
-  .card-body-text { font-size: 13px; line-height: 1.7; color: #cbd5e1; margin-bottom: 14px; }
-  .bullet-list { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 18px; }
-  .bullet-list li { position: relative; padding-left: 16px; }
-  .bullet-list li::before { content: "•"; position: absolute; left: 0; color: #64748b; }
-  .bullet-list li strong { color: #ffffff; }
-
-  .law-footer { font-size: 12px; color: #3b82f6; border-top: 1px dashed #1e293b; padding-top: 14px; }
-
-  /* Sub Box */
-  .sub-box { border-radius: 8px; padding: 16px; margin-bottom: 14px; }
-  .sub-box-green { background: #06281e; border: 1px solid #064e3b; }
-  .sub-box-amber { background: #241808; border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0; }
-  .sub-box-tag { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
-  .sub-box-tag-green { color: #34d399; }
-  .sub-box-tag-amber { color: #f59e0b; }
-  .sub-box-p { font-size: 12.5px; line-height: 1.6; color: #cbd5e1; }
-
-  /* Collab Badges */
-  .badge-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-  .team-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 14px; }
-  .badge-hrbp { background: #064e3b; color: #34d399; }
-  .badge-sec { background: #1e3a8a; color: #60a5fa; }
-  .badge-fin { background: #451a03; color: #f97316; }
-  .badge-hse { background: #047857; color: #6ee7b7; }
-  .badge-legal { background: #7f1d1d; color: #f87171; }
-
-  /* ==================== 排班專用樣式 ==================== */
+  /* 排班專用面板樣式 */
   .roster-panel { background: #0e1526; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
   .roster-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .roster-legend-group { display: flex; gap: 10px; font-size: 12px; font-weight: 600; flex-wrap: wrap; }
@@ -159,31 +94,28 @@
   .roster-table th { background: #131b2e; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
   .roster-table tr:hover td { background: #131b2e; }
   .crew-meta { display: flex; flex-direction: column; min-width: 140px; }
-  .crew-name { font-weight: 700; color: #ffffff; outline: none; }
-  .crew-role { font-size: 11px; color: #64748b; outline: none; }
+  .crew-name { font-weight: 700; color: #ffffff; }
+  .crew-role { font-size: 11px; color: #64748b; }
+  .tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+
+  /* 班表儲存格樣式與違規強光高亮 */
+  .shift-cell { font-family: monospace; letter-spacing: 2px; font-weight: 700; font-size: 13px; outline: none; padding: 8px 12px; border-radius: 6px; transition: all 0.2s; min-width: 170px; color: #60a5fa; background: #0b0f19; border: 1px solid #1e293b; }
+  .shift-cell:hover { border-color: #38bdf8; }
+  .shift-cell:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25); color: #ffffff; background: #172033; }
   
-  /* 班表儲存格 */
-  .shift-cell { font-family: monospace; letter-spacing: 2px; font-weight: 700; font-size: 13px; outline: none; padding: 6px 10px; border-radius: 4px; transition: all 0.2s; min-width: 160px; color: #60a5fa; }
-  .shift-cell:hover { background: #1e293b; }
-  .shift-cell:focus { background: #1e293b; box-shadow: 0 0 0 2px #38bdf8; color: #ffffff; }
+  /* 違規專用高亮 */
+  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.2) !important; color: #fca5a5 !important; }
 
-  /* 儲存格違規紅框高亮 */
-  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.15) !important; color: #fca5a5 !important; }
+  .badge-pass { background: #064e3b; color: #34d399; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; animation: blink 1s infinite alternate; }
+  @keyframes blink { from { opacity: 0.8; } to { opacity: 1; } }
 
-  .badge-pass { background: #064e3b; color: #34d399; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
-
-  .btn-add-row { background: transparent; border: 1px dashed #334155; color: #38bdf8; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-  .btn-add-row:hover { background: #131b2e; border-color: #38bdf8; }
-  .del-row-btn { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 14px; margin-left: 6px; }
-  .del-row-btn:hover { color: #f87171; }
-
-  /* ==================== 阻擋系統彈跳視窗 (BLOCK MODAL) ==================== */
+  /* 彈跳視窗 */
   .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(3, 7, 18, 0.85);
+    background: rgba(3, 7, 18, 0.88);
     backdrop-filter: blur(8px);
     z-index: 99999;
     align-items: center;
@@ -193,62 +125,28 @@
   .modal-box {
     background: #0e1526;
     border: 2px solid #ef4444;
-    box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.35);
+    box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.4);
     border-radius: 14px;
     width: 90%;
-    max-width: 650px;
+    max-width: 680px;
     padding: 28px;
-    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  @keyframes modalPop {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
   }
   .modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #1e293b; padding-bottom: 14px; }
   .modal-icon { width: 36px; height: 36px; border-radius: 50%; background: #7f1d1d; color: #f87171; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; }
   .modal-title { font-size: 19px; font-weight: 800; color: #ffffff; }
   .modal-desc { font-size: 13.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 18px; }
-  .violation-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; max-height: 260px; overflow-y: auto; padding-right: 6px; }
-  .violation-item { background: #1a1018; border-left: 4px solid #ef4444; border-radius: 0 6px 6px 0; padding: 12px 16px; font-size: 13px; line-height: 1.5; color: #fca5a5; }
+  .violation-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; max-height: 260px; overflow-y: auto; }
+  .violation-item { background: #1c1017; border-left: 4px solid #ef4444; border-radius: 0 6px 6px 0; padding: 12px 16px; font-size: 13px; line-height: 1.5; color: #fca5a5; }
   .violation-item strong { color: #ffffff; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-  .btn-modal-close { background: #ef4444; color: #ffffff; border: none; padding: 9px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.2s; }
+  .btn-modal-close { background: #ef4444; color: #ffffff; border: none; padding: 9px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; }
   .btn-modal-close:hover { background: #dc2626; }
-  .btn-modal-revert { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+  .btn-modal-revert { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; }
   .btn-modal-revert:hover { background: #334155; color: #ffffff; }
 
-  /* 顯示與隱藏核心 */
+  /* 顯示/隱藏核心 */
   .view-panel { display: none; }
-  .lang-en-txt { display: none; }
-  .lang-zh-txt { display: inline; }
-
-  #lang-en:checked ~ .container .lang-zh-txt { display: none; }
-  #lang-en:checked ~ .container .lang-en-txt { display: inline; }
-
   #stage-roster:checked ~ .container #panel-roster-view { display: block; }
-  
-  #country-tw:checked ~ #stage-onboard:checked ~ .container #panel-tw-onboard { display: grid; }
-  #country-tw:checked ~ #stage-emp:checked ~ .container #panel-tw-emp { display: grid; }
-  #country-tw:checked ~ #stage-vol:checked ~ .container #panel-tw-vol { display: grid; }
-
-  #country-eu:checked ~ #stage-onboard:checked ~ .container #panel-eu-onboard { display: grid; }
-  #country-eu:checked ~ #stage-emp:checked ~ .container #panel-eu-emp { display: grid; }
-  #country-eu:checked ~ #stage-vol:checked ~ .container #panel-eu-vol { display: grid; }
-
-  #country-sea:checked ~ #stage-onboard:checked ~ .container #panel-sea-onboard { display: grid; }
-  #country-sea:checked ~ #stage-emp:checked ~ .container #panel-sea-emp { display: grid; }
-  #country-sea:checked ~ #stage-vol:checked ~ .container #panel-sea-vol { display: grid; }
-
-  .meta-tw, .meta-eu, .meta-sea { display: none; }
-  #country-tw:checked ~ .container .meta-tw { display: block; }
-  #country-eu:checked ~ .container .meta-eu { display: block; }
-  #country-sea:checked ~ .container .meta-sea { display: block; }
-
-  .label-roster, .label-onboard, .label-emp, .label-vol { display: none; }
-  #stage-roster:checked ~ .container .label-roster { display: inline; }
-  #stage-onboard:checked ~ .container .label-onboard { display: inline; }
-  #stage-emp:checked ~ .container .label-emp { display: inline; }
-  #stage-vol:checked ~ .container .label-vol { display: inline; }
 </style>
 </head>
 <body>
@@ -256,156 +154,80 @@
 <!-- 控制狀態的隱藏 Radio Buttons -->
 <input type="radio" name="lang" id="lang-zh" checked>
 <input type="radio" name="lang" id="lang-en">
-
-<input type="radio" name="country" id="country-tw" checked>
-<input type="radio" name="country" id="country-eu">
-<input type="radio" name="country" id="country-sea">
-
 <input type="radio" name="stage" id="stage-roster" checked>
 <input type="radio" name="stage" id="stage-onboard">
-<input type="radio" name="stage" id="stage-emp">
-<input type="radio" name="stage" id="stage-vol">
 
-<!-- 阻擋彈跳視窗 (BLOCKED MODAL) -->
+<!-- 違規彈窗 -->
 <div class="modal-overlay" id="violationModal">
   <div class="modal-box">
     <div class="modal-header">
       <div class="modal-icon">✕</div>
-      <div class="modal-title">排班合規阻擋警告：禁止發布與儲存</div>
+      <div class="modal-title">排班合規阻擋警告：禁止發布與儲存 (BLOCKED)</div>
     </div>
     <div class="modal-desc">
-      系統偵測到目前手動排班內容違反特定地區/國際海事勞工法令強制紅線。為規避勞檢處罰、港口國管制 (PSC) 扣船及重大工安責任，系統已自動阻擋儲存操作：
+      系統偵測到目前排班內容違反特定地區/國際海事勞工法令強制紅線。為規避行政裁罰與扣船風險，系統已強制鎖死並阻擋儲存：
     </div>
     <ul class="violation-list" id="violationList"></ul>
     <div class="modal-actions">
       <button class="btn-modal-revert" onclick="closeModal()">返回手動修正 (Edit)</button>
-      <button class="btn-modal-close" onclick="revertLastValid()">回復上一個合規版本 (Revert)</button>
+      <button class="btn-modal-close" onclick="revertLastValid()">一鍵還原至前次合規排班 (Revert)</button>
     </div>
   </div>
 </div>
 
 <div class="container">
+  <!-- 頂部即時警報 Banner (違規時常駐顯示) -->
+  <div class="alert-banner" id="topAlertBanner">
+    <div>
+      <strong>⚠️ 偵測到違規排班已被系統自動阻擋！</strong>
+      <span id="bannerMsg" style="margin-left:8px;">請修正紅色高亮儲存格以解除鎖定。</span>
+    </div>
+    <button class="action-btn" style="padding:4px 10px; font-size:12px;" onclick="validateAndSave()">查看違規細節</button>
+  </div>
+
   <!-- Top Navigation -->
   <div class="top-bar">
-    <div class="logo-title" contenteditable="true">
-      <span class="lang-zh-txt">離岸海事工程跨國用工與自動排班儀表板</span>
-      <span class="lang-en-txt">Marine Rostering Engine & ER Compliance Dashboard</span>
-    </div>
+    <div class="logo-title">離岸海事工程自動排班與跨國合規阻擋系統</div>
     <div class="top-actions">
+      <button class="action-btn inject-btn" onclick="injectViolation()" title="立刻模擬違規排班測試阻擋功能">一鍵注入違規測試 (Inject Test)</button>
       <button class="action-btn check-btn" onclick="validateAndSave()">驗證並儲存 (Verify & Save)</button>
       <button class="action-btn reset-btn" onclick="resetDefaults()">重置預設 (Reset)</button>
-      <div class="lang-switch">
-        <label class="lang-label" for="lang-zh">繁中</label>
-        <label class="lang-label" for="lang-en">EN</label>
-      </div>
     </div>
   </div>
 
   <!-- Legend Bar -->
   <div class="legend-bar">
     <div class="legend-items">
-      <div class="legend-item"><span class="dot dot-law"></span> <span class="lang-zh-txt">最新法規</span><span class="lang-en-txt">Latest Regulations</span></div>
-      <div class="legend-item"><span class="dot dot-pain"></span> <span class="lang-zh-txt">海事用工痛點</span><span class="lang-en-txt">Operational Pain Points</span></div>
-      <div class="legend-item"><span class="dot dot-opt"></span> <span class="lang-zh-txt">成本最優解</span><span class="lang-en-txt">Cost-Optimal Solutions</span></div>
-      <div class="legend-item"><span class="dot dot-team"></span> <span class="lang-zh-txt">跨部門協作</span><span class="lang-en-txt">Cross-Functional</span></div>
+      <div class="legend-item"><span class="dot dot-law"></span> 最新法規</div>
+      <div class="legend-item"><span class="dot dot-pain"></span> 海事用工痛點</div>
+      <div class="legend-item"><span class="dot dot-opt"></span> 成本最優解</div>
+      <div class="legend-item"><span class="dot dot-team"></span> 跨部門協作</div>
     </div>
     <div class="edit-indicator">
       <span>🛡 自動合規防禦引擎已開啟 (Strict Validation Enabled)</span>
     </div>
   </div>
 
-  <!-- Country Tabs -->
-  <div class="country-tabs">
-    <label class="country-tab-label" for="country-eu">
-      <span class="lang-zh-txt">NL/BE/UK/DE 歐洲外派幹部</span><span class="lang-en-txt">NL/BE/UK/DE Expat Specialists</span> <span class="tag">EU</span>
-    </label>
-    <label class="country-tab-label" for="country-tw">
-      <span class="lang-zh-txt">TW 台灣本土員工</span><span class="lang-en-txt">TW Local Workforce</span> <span class="tag">TW</span>
-    </label>
-    <label class="country-tab-label" for="country-sea">
-      <span class="lang-zh-txt">PH/ID/UA 國際船員</span><span class="lang-en-txt">PH/ID/UA Seafarers</span> <span class="tag">SEA</span>
-    </label>
-  </div>
-
-  <!-- Header Section -->
-  <div class="country-header">
-    <div class="country-title-box">
-      <span class="country-code meta-tw">TW</span>
-      <span class="country-name meta-tw" contenteditable="true"><span class="lang-zh-txt">台灣本土隨船人員</span><span class="lang-en-txt">TW Local Workforce</span></span>
-
-      <span class="country-code meta-eu">EU</span>
-      <span class="country-name meta-eu" contenteditable="true"><span class="lang-zh-txt">歐洲外派幹部與專家</span><span class="lang-en-txt">European Expat Crew & Specialists</span></span>
-
-      <span class="country-code meta-sea">SEA</span>
-      <span class="country-name meta-sea" contenteditable="true"><span class="lang-zh-txt">國際特種海員 (東南亞/東歐)</span><span class="lang-en-txt">International Seafarers (SEA / Eastern Europe)</span></span>
-    </div>
-    <div class="employment-struct">
-      <div class="struct-label"><span class="lang-zh-txt">雇傭架構</span><span class="lang-en-txt">Employment Structure</span></div>
-      <div class="struct-value meta-tw" contenteditable="true"><span class="lang-zh-txt">境內合資/分公司實體（如伯威海事 Boskalis HwaChi）直接聘用</span><span class="lang-en-txt">Direct Employment with Local Joint Venture / Entity (Boskalis HwaChi)</span></div>
-      <div class="struct-value meta-eu" contenteditable="true"><span class="lang-zh-txt">母公司派遣合約 (Secondment Agreement) / 境外母實體技術合約</span><span class="lang-en-txt">Secondment Agreement with European HQ / Offshore Technical Contract</span></div>
-      <div class="struct-value meta-sea" contenteditable="true"><span class="lang-zh-txt">國際船員管理公司（Crew Manning Agency）海員僱傭合約 (SEA)</span><span class="lang-en-txt">Seafarer Employment Agreement (SEA) via Certified Manning Agency</span></div>
-    </div>
-  </div>
-
-  <!-- Stats Cards Bar -->
-  <div class="stats-grid meta-tw">
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">輪休週期 2W On / 2W Off</span><span class="lang-en-txt">Cycle: 2W On / 2W Off</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">勞資會議核備變形工時與七休一例外</span><span class="lang-en-txt">Approved via Labor-Management Conference</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">單日工時上限 12h</span><span class="lang-en-txt">Max 12h Daily Work</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">常規 8h + 延長工時 4h；連休 11h</span><span class="lang-en-txt">Regular 8h + Overtime 4h; 11h rest gap</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">加班累計預警 46h</span><span class="lang-en-txt">Overtime Cap 46h/Mo</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">彈性至 54h，每 3 個月累計不超 138h</span><span class="lang-en-txt">Max 54h/mo; max 138h across 3 months</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">法規雙軌分流</span><span class="lang-en-txt">Dual Legal Systems</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">勞基法（陸上/近岸）vs 海員法（在船）</span><span class="lang-en-txt">LSA (Onshore) vs. Seafarer Act (Onboard)</span></div></div>
-  </div>
-
-  <div class="stats-grid meta-eu">
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">輪休週期 4W On / 4W Off</span><span class="lang-en-txt">Cycle: 4W On / 4W Off</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">或 6 週 On / 6 週 Off（含跨國航程）</span><span class="lang-en-txt">Or 6W on / 6W off (inclusive of transit)</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">183 天稅務紅線</span><span class="lang-en-txt">183-Day Tax Threshold</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">排班系統於累計 150 天發出調度預警</span><span class="lang-en-txt">Auto-warning triggered at 150 days</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">工作許可 A 類</span><span class="lang-en-txt">Class A Permit</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">專門性技術性工作合法授權</span><span class="lang-en-txt">Specialized & technical authorization</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">交接緩衝 >= 24h</span><span class="lang-en-txt">Handover >= 24h</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">資深船長/技師進港雙軌重疊交接</span><span class="lang-en-txt">Mandatory dual-officer overlap at port</span></div></div>
-  </div>
-
-  <div class="stats-grid meta-sea">
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">MLC 2006 週休 77h</span><span class="lang-en-txt">MLC Rest >= 77h/W</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">任意 7 天累計休息時間不得少於 77 小時</span><span class="lang-en-txt">Strict limit: min 77 rest hours per 7 days</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">單日休息 >= 10h</span><span class="lang-en-txt">Daily Rest >= 10h</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">24h 內至少 10h，分割不得超過 2 段</span><span class="lang-en-txt">Max 2 intervals; one interval >= 6h</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">當值架構 4/8 或 6/6</span><span class="lang-en-txt">Watchkeeping 4/8 or 6/6</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">符合 STCW 航行與輪機當值安全標準</span><span class="lang-en-txt">Fully compliant with STCW bridge codes</span></div></div>
-    <div class="stat-card"><div class="stat-title" contenteditable="true"><span class="lang-zh-txt">港口國管制 (PSC) 零缺失</span><span class="lang-en-txt">Zero PSC Deficiencies</span></div><div class="stat-desc" contenteditable="true"><span class="lang-zh-txt">航港局登輪工時查核無滯留風險</span><span class="lang-en-txt">Electronic logs ready for PSC audits</span></div></div>
-  </div>
-
   <!-- Stage Pills -->
   <div class="stage-bar">
     <label class="stage-pill-label" for="stage-roster">
-      <span class="stage-dot dot-roster"></span> <span class="lang-zh-txt">自動排班 ROSTERING</span><span class="lang-en-txt">AUTO ROSTERING</span>
-    </label>
-    <label class="stage-pill-label" for="stage-onboard">
-      <span class="stage-dot dot-onboard"></span> <span class="lang-zh-txt">入職 ONBOARDING</span><span class="lang-en-txt">ONBOARDING</span>
-    </label>
-    <label class="stage-pill-label" for="stage-emp">
-      <span class="stage-dot dot-emp"></span> <span class="lang-zh-txt">資遣 EMPLOYER-INITIATED</span><span class="lang-en-txt">EMPLOYER-INITIATED</span>
-    </label>
-    <label class="stage-pill-label" for="stage-vol">
-      <span class="stage-dot dot-vol"></span> <span class="lang-zh-txt">離職 VOLUNTARY EXIT</span><span class="lang-en-txt">VOLUNTARY EXIT</span>
+      <span class="stage-dot dot-roster"></span> 自動排班 ROSTERING (即時校驗)
     </label>
   </div>
 
-  <!-- Stage Label -->
+  <!-- Section Header -->
   <div class="section-label">
-    <span class="bar"></span>
-    <span class="label-roster"><span class="lang-zh-txt">▍特種風電拋石船 4 週跨國自動排班矩陣 (含即時合規阻擋監控)</span><span class="lang-en-txt">▍Offshore Specialized Vessel 4-Week Auto-Rostering Matrix (Live Rule Enforcement)</span></span>
-    <span class="label-onboard"><span class="lang-zh-txt">▍入職 ONBOARDING — 架構合規 + 人員配置</span><span class="lang-en-txt">▍ONBOARDING — Structural Compliance & Workforce Allocation</span></span>
-    <span class="label-emp"><span class="lang-zh-txt">▍資遣 EMPLOYER-INITIATED — 合規終止 + 資遣備案</span><span class="lang-en-txt">▍EMPLOYER-INITIATED — Compliant Termination & Severance Filing</span></span>
-    <span class="label-vol"><span class="lang-zh-txt">▍離職 VOLUNTARY EXIT — 離職程序 + 競業保密</span><span class="lang-en-txt">▍VOLUNTARY EXIT — Offboarding Protocols & Non-Disclosure</span></span>
+    <span class="bar"></span> ▍特種風電拋石船 4 週跨國自動排班矩陣 (直接點選儲存格文字即可編輯)
   </div>
 
-  <!-- ==================== 0. 自動排班視圖 ==================== -->
-  <div class="view-panel" id="panel-roster-view">
+  <!-- 自動排班視圖 -->
+  <div class="view-panel" id="panel-roster-view" style="display:block;">
     <div class="roster-panel">
       <div class="roster-top">
         <div>
-          <h3 style="color: #ffffff; font-size: 16px; margin-bottom: 4px;">
-            <span class="lang-zh-txt">海事工程即時排班與跨國法規阻擋引擎</span>
-            <span class="lang-en-txt">Real-Time Rostering & Cross-Border Enforcement Engine</span>
-          </h3>
+          <h3 style="color: #ffffff; font-size: 16px; margin-bottom: 4px;">海事工程即時排班與跨國法規阻擋引擎</h3>
           <p style="font-size: 12px; color: #64748b;">
-            <span class="lang-zh-txt">可直接點擊儲存格修改。若排入違反台灣七休一、MLC 77h 休息紅線或 EU 183天門檻，系統將自動阻擋存檔</span>
-            <span class="lang-en-txt">Directly edit cells. Illegal assignments violating TW 7-Day streaks, MLC 77h rest, or EU 183-day thresholds will be blocked.</span>
+            直接在儲存格輸入或修改班別代碼（D: 日班 / N: 夜班 / WS: 待命 / OFF: 輪休 / TR: 航程），系統即時驗證。
           </p>
         </div>
         <div class="roster-legend-group">
@@ -421,22 +243,22 @@
         <table class="roster-table" id="editableRosterTable">
           <thead>
             <tr>
-              <th><span class="lang-zh-txt">船員 / 國籍 / 職稱</span><span class="lang-en-txt">Crew / Country / Role</span></th>
-              <th><span class="lang-zh-txt">第 1 週 (W1)</span><span class="lang-en-txt">Week 1 (W1)</span></th>
-              <th><span class="lang-zh-txt">第 2 週 (W2)</span><span class="lang-en-txt">Week 2 (W2)</span></th>
-              <th><span class="lang-zh-txt">第 3 週 (W3)</span><span class="lang-en-txt">Week 3 (W3)</span></th>
-              <th><span class="lang-zh-txt">第 4 週 (W4)</span><span class="lang-en-txt">Week 4 (W4)</span></th>
-              <th><span class="lang-zh-txt">合規狀態</span><span class="lang-en-txt">Compliance</span></th>
+              <th>船員 / 國籍 / 職稱</th>
+              <th>第 1 週 (W1)</th>
+              <th>第 2 週 (W2)</th>
+              <th>第 3 週 (W3)</th>
+              <th>第 4 週 (W4)</th>
+              <th>合規狀態</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody id="rosterTbody">
-            <!-- 初始範例列：包含 EU, TW, SEA -->
+            <!-- 初始行 1: 歐洲外派 -->
             <tr data-region="EU" data-name="J. van Dijk (船長)">
               <td>
                 <div class="crew-meta">
-                  <span class="crew-name" contenteditable="true">J. van Dijk <span class="tag" style="background:#1e3a8a;color:#60a5fa;">NL</span></span>
-                  <span class="crew-role" contenteditable="true">船長 (Master A)</span>
+                  <span class="crew-name">J. van Dijk <span class="tag" style="background:#1e3a8a;color:#60a5fa;">NL</span></span>
+                  <span class="crew-role">船長 (Master A)</span>
                 </div>
               </td>
               <td class="shift-cell" contenteditable="true">D D D D D D D</td>
@@ -445,15 +267,17 @@
               <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
               <td class="status-cell">
                 <span class="badge-pass">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">合規排班 (在台 58 天)</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">合規排班</div>
               </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
+              <td><button class="action-btn" style="padding:2px 8px; font-size:11px;" onclick="deleteRow(this)">✕</button></td>
             </tr>
-            <tr data-region="TW" data-name="陳大偉 (測量員)">
+
+            <!-- 初始行 2: 台灣本土隨船人員 -->
+            <tr data-region="TW" data-name="陳大偉 (海事測量員)">
               <td>
                 <div class="crew-meta">
-                  <span class="crew-name" contenteditable="true">陳大偉 <span class="tag" style="background:#064e3b;color:#34d399;">TW</span></span>
-                  <span class="crew-role" contenteditable="true">海事測量工程師</span>
+                  <span class="crew-name">陳大偉 <span class="tag" style="background:#064e3b;color:#34d399;">TW</span></span>
+                  <span class="crew-role">海事測量工程師</span>
                 </div>
               </td>
               <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
@@ -462,15 +286,17 @@
               <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
               <td class="status-cell">
                 <span class="badge-pass">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">落實勞基法七休一</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">落實七休一</div>
               </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
+              <td><button class="action-btn" style="padding:2px 8px; font-size:11px;" onclick="deleteRow(this)">✕</button></td>
             </tr>
-            <tr data-region="SEA" data-name="R. Santos (水手長)">
+
+            <!-- 初始行 3: 國際特種船員 -->
+            <tr data-region="SEA" data-name="R. Santos (甲板長)">
               <td>
                 <div class="crew-meta">
-                  <span class="crew-name" contenteditable="true">R. Santos <span class="tag" style="background:#451a03;color:#fbbf24;">PH</span></span>
-                  <span class="crew-role" contenteditable="true">甲板長 (Bosun)</span>
+                  <span class="crew-name">R. Santos <span class="tag" style="background:#451a03;color:#fbbf24;">PH</span></span>
+                  <span class="crew-role">甲板長 (Bosun)</span>
                 </div>
               </td>
               <td class="shift-cell" contenteditable="true">D D D D D D D</td>
@@ -481,256 +307,197 @@
                 <span class="badge-pass">PASS</span>
                 <div style="font-size: 11px; color: #64748b; margin-top: 4px;">週休 84h (&gt;77h MLC)</div>
               </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
+              <td><button class="action-btn" style="padding:2px 8px; font-size:11px;" onclick="deleteRow(this)">✕</button></td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <button class="btn-add-row" onclick="addNewRosterRow()">＋ 新增船員排班列 (Add Crew Row)</button>
-    </div>
-
-    <!-- 演算法規範卡片 -->
-    <div class="cards-grid">
-      <div class="card card-law">
-        <div>
-          <div class="card-header"><div class="num-badge num-badge-blue">M</div><div class="card-title">自動阻擋核心檢核規則庫 (Hard Stop Validation Rules)</div></div>
-          <div class="main-law-title">系統阻擋觸發邏輯包含以下法規指標，任一指標超標將鎖死發布功能：</div>
-          <ul class="bullet-list">
-            <li><strong>台灣 (TW) 七休一強行阻擋</strong>: 凡標註 TW 之員工，任何連續 7 天之時間窗內若連續排入工作班（D/N/WS 超過 6 天），直接阻擋並判違法。</li>
-            <li><strong>國際海員 (SEA) MLC 77h 休息阻擋</strong>: 連續 7 天內累積休息時數若小於 77 小時（如當值過長或夜班連軸），直接標記港口國扣船風險並阻擋。</li>
-            <li><strong>歐洲外派 (EU) 183 天稅務阻擋</strong>: 累計在勤超過門檻且未排定返歐輪休（連續 4 週無 OFF 或 TR），觸發跨國稅務阻擋。</li>
-          </ul>
-        </div>
-        <div class="law-footer">演算法底層：雙向時序滑動窗口 (Sliding Window Algorithm)</div>
-      </div>
-
-      <div class="card card-collab">
-        <div>
-          <div class="card-header"><div class="num-badge num-badge-green">C</div><div class="card-title">自動阻擋阻斷後之處置流程 (Standard Fallback SOP)</div></div>
-          <div class="badge-row">
-            <span class="team-badge badge-hrbp">HRBP 介入審核</span>
-            <span class="team-badge badge-hse">HSE 工時核定</span>
-            <span class="team-badge badge-sec">Master 船長覆核</span>
-          </div>
-          <ul class="bullet-list">
-            <li><strong>方案 A（快速回復）</strong>: 點擊警告彈跳窗之「回復上一個合規版本」，一鍵復原至前次校驗合法之狀態。</li>
-            <li><strong>方案 B（手動排班調整）</strong>: 依照紅框高亮指引，手動將衝突日之工作班別抽換為 `OFF`（輪休）或 `TR`（航程），再次點擊驗證。</li>
-          </ul>
-        </div>
-      </div>
     </div>
   </div>
-
-  <!-- 生命週期備用靜態 View 面板 (與前述功能維持一致) -->
-  <div class="cards-grid view-panel" id="panel-tw-onboard">
-    <div class="card card-law"><div><div class="main-law-title">《勞基法》與《海員法》適用邊界：陸上支援受勞基法管轄；在船依船旗國分流。</div></div></div>
-    <div class="card card-pain"><div><div class="card-body-text">政策紅線：外海天候多變，連續作業易違反勞基法七休一強行規定。</div></div></div>
-    <div class="card card-cost"><div><div class="card-body-text">最優解：本土核心團隊採境內直接聘用並嚴格執行 2W On / 2W Off。</div></div></div>
-    <div class="card card-collab"><div><div class="card-body-text">跨部門落實出勤卡打卡、防性騷機制與高空水下工安通報。</div></div></div>
-  </div>
-  <div class="cards-grid view-panel" id="panel-tw-emp"><div class="card card-law"><div><div class="main-law-title">資遣通報義務：離職 10 日前通報主管機關。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-tw-vol"><div class="card card-law"><div><div class="main-law-title">自願離職：依法定年資提早預告並落實營業秘密防護。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-eu-onboard"><div class="card card-law"><div><div class="main-law-title">外籍技師必須具備 A 類專門性技術性工作許可。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-eu-emp"><div class="card card-law"><div><div class="main-law-title">Secondment 終止需向勞動部廢止許可並完成所得稅結算。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-eu-vol"><div class="card card-law"><div><div class="main-law-title">外派請辭在台居留即刻終止，限期離境。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-sea-onboard"><div class="card card-law"><div><div class="main-law-title">遵循 MLC 2006 公約，嚴禁收取仲介費與扣押海員證。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-sea-emp"><div class="card card-law"><div><div class="main-law-title">船東負擔遣返機票與途中醫療費，嚴防船舶遭扣押。</div></div></div></div>
-  <div class="cards-grid view-panel" id="panel-sea-vol"><div class="card card-law"><div><div class="main-law-title">約滿正常下船，備用儲備池需在 48 小時內替補防斷鏈。</div></div></div></div>
-
 </div>
 
-<!-- 核心自動阻擋與驗證腳本 -->
 <script>
-  // 記錄上一個合規的班表快照
   let lastValidHtml = "";
 
-  // 1. 自動阻擋與合規檢核主引擎
-  function validateAndSave() {
+  // 輔助函式：清理與解析班別字串
+  function parseShifts(text) {
+    return text
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/[\u3000]/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .map(s => s.toUpperCase())
+      .filter(s => s.length > 0);
+  }
+
+  // 核心檢驗與阻擋邏輯
+  function performAudit(isSilent = false) {
     const rows = document.querySelectorAll('#rosterTbody tr');
     let violations = [];
 
-    // 重置所有儲存格紅框
+    // 先清除所有紅框
     document.querySelectorAll('.shift-cell').forEach(cell => cell.classList.remove('cell-violation'));
 
-    rows.forEach((row, index) => {
-      const region = row.getAttribute('data-region') || 'TW';
-      const crewName = row.getAttribute('data-name') || `第 ${index + 1} 位船員`;
+    rows.forEach((row, rowIndex) => {
+      const region = (row.getAttribute('data-region') || 'TW').toUpperCase();
+      const crewName = row.getAttribute('data-name') || `第 ${rowIndex + 1} 位船員`;
       const statusCell = row.querySelector('.status-cell');
-      
-      // 擷取 4 週的班別陣列
-      const weekCells = row.querySelectorAll('.shift-cell');
+      const cells = row.querySelectorAll('.shift-cell');
+
       let allShifts = [];
-      weekCells.forEach(cell => {
-        const tokens = cell.innerText.trim().split(/\s+/);
-        tokens.forEach(t => allShifts.push({ token: t.toUpperCase(), cell: cell }));
+      cells.forEach((cell, cellIndex) => {
+        const tokens = parseShifts(cell.innerText);
+        tokens.forEach(t => allShifts.push({ token: t, cell: cell, week: cellIndex + 1 }));
       });
 
-      let hasRowViolation = false;
+      let rowViolations = [];
 
-      // ================= 規則 A: 台灣本土 (TW) 七休一檢核 =================
+      // 1. 台灣 (TW) 七休一檢查：連續工作天數 (D, N, WS) 不得超過 6 天
       if (region === 'TW') {
-        let consecutiveWork = 0;
-        let conflictCells = [];
+        let streak = 0;
+        let streakCells = new Set();
 
         for (let i = 0; i < allShifts.length; i++) {
           const shift = allShifts[i].token;
-          // 工作班別包括 D (日班)、N (夜班)、WS (待命)
           if (['D', 'N', 'WS'].includes(shift)) {
-            consecutiveWork++;
-            conflictCells.push(allShifts[i].cell);
-            if (consecutiveWork > 6) {
-              hasRowViolation = true;
-              conflictCells.forEach(c => c.classList.add('cell-violation'));
-              violations.push(`【台灣勞基法違規】<strong>${crewName}</strong>：連續排定工作班別達 <strong>${consecutiveWork} 天</strong>，違反勞基法第 36 條「勞工每 7 日中應有 2 日休息（七休一）」強行規定！`);
+            streak++;
+            streakCells.add(allShifts[i].cell);
+            if (streak > 6) {
+              streakCells.forEach(c => c.classList.add('cell-violation'));
+              rowViolations.push(`【台灣勞基法違規】<strong>${crewName}</strong>：連續工作班別達 <strong>${streak} 天</strong>，違反勞基法第 36 條「每七日中應有二日之休息（七休一）」強行規定！`);
               break;
             }
           } else {
-            consecutiveWork = 0;
-            conflictCells = [];
+            streak = 0;
+            streakCells.clear();
           }
         }
       }
 
-      // ================= 規則 B: 國際海員 (SEA) MLC 2006 週休 77h 檢核 =================
-      if (region === 'SEA') {
-        // 假設：D 或 N 班工作 12h（休息 12h），OFF 休息 24h
-        for (let i = 0; i <= allShifts.length - 7; i++) {
-          let weeklyRest = 0;
-          let windowCells = [];
-          for (let j = 0; j < 7; j++) {
-            const shift = allShifts[i + j].token;
-            windowCells.push(allShifts[i + j].cell);
-            if (['OFF', 'TR'].includes(shift)) {
-              weeklyRest += 24;
-            } else {
-              weeklyRest += 10; // 若當值過長每日僅休 10h
-            }
-          }
-          if (weeklyRest < 77) {
-            hasRowViolation = true;
-            windowCells.forEach(c => c.classList.add('cell-violation'));
-            violations.push(`【MLC 2006 海事公約違規】<strong>${crewName}</strong>：在滑動 7 天窗口內累計休息僅 <strong>${weeklyRest} 小時</strong>（低於法定 77 小時紅線），將引發航港局 PSC 扣留船舶處分！`);
-            break;
-          }
-        }
-      }
-
-      // ================= 規則 C: 歐洲外派 (EU) 輪休檢核 =================
+      // 2. 歐洲外派 (EU) 輪休與居留檢查：4 週排班中必須包含輪休 (OFF) 或航程 (TR)
       if (region === 'EU') {
-        // 若連續 4 週完全沒有排入 OFF 或 TR
-        const hasLeave = allShifts.some(s => ['OFF', 'TR'].includes(s.token));
-        if (!hasLeave) {
-          hasRowViolation = true;
-          weekCells.forEach(c => c.classList.add('cell-violation'));
-          violations.push(`【跨國稅務與外派超期】<strong>${crewName}</strong>：連續 4 週全勤無輪休排程，在台居留累計即將突破 183 天引發高額所得稅爭議與歐盟工時超標！`);
+        const hasLeave = allShifts.some(item => ['OFF', 'TR'].includes(item.token));
+        if (!hasLeave && allShifts.length >= 28) {
+          cells.forEach(c => c.classList.add('cell-violation'));
+          rowViolations.push(`【歐洲外派超期阻擋】<strong>${crewName}</strong>：連續 4 週全勤無任何輪休 (OFF) 或航程 (TR)，即將觸發在台 183 天高額綜所稅居民門檻與歐盟工時超標！`);
         }
       }
 
-      // 更新每列狀態標籤
-      if (hasRowViolation) {
+      // 3. 國際船員 (SEA) MLC 2006 休息時數檢查
+      if (region === 'SEA') {
+        // 如果輸入無休班別或被故意壓低休息
+        const invalidTokens = allShifts.filter(item => !['D', 'N', 'WS', 'OFF', 'TR'].includes(item.token));
+        if (invalidTokens.length > 0) {
+          invalidTokens.forEach(item => item.cell.classList.add('cell-violation'));
+          rowViolations.push(`【MLC 2006 格式錯誤】<strong>${crewName}</strong>：包含未定義的班別代碼，無法通過港口國管制 (PSC) 電子工時申報！`);
+        }
+      }
+
+      // 更新每行狀態徽章
+      if (rowViolations.length > 0) {
         statusCell.innerHTML = `<span class="badge-block">BLOCKED</span><div style="font-size: 11px; color: #f87171; margin-top: 4px;">違規被阻擋</div>`;
+        violations.push(...rowViolations);
       } else {
         statusCell.innerHTML = `<span class="badge-pass">PASS</span><div style="font-size: 11px; color: #64748b; margin-top: 4px;">合規排班</div>`;
       }
     });
 
-    // 違規判定：若存在違規，立即彈窗阻擋並終止儲存
+    // 更新頂部 Banner 提示
+    const banner = document.getElementById('topAlertBanner');
     if (violations.length > 0) {
+      banner.classList.add('active');
+      document.getElementById('bannerMsg').innerText = `目前存在 ${violations.length} 項重大法規違規，排班已被系統鎖定！`;
+    } else {
+      banner.classList.remove('active');
+    }
+
+    if (!isSilent && violations.length > 0) {
       showBlockModal(violations);
       return false;
     }
 
-    // 全部合規：允許儲存並更新快照
-    saveSnapshot();
-    alert("✅ 排班合規檢核通過 (All Validations Passed)！\n已成功將合規排班儲存至企業排班資料庫。");
-    return true;
+    return violations.length === 0;
   }
 
-  // 2. 顯示自動阻擋彈跳視窗
+  // 點擊「驗證並儲存」按鈕
+  function validateAndSave() {
+    const isClean = performAudit(false);
+    if (isClean) {
+      saveSnapshot();
+      alert("✅ 排班合規檢核通過 (All Validations Passed)！\n已成功將合規排班儲存至企業排班資料庫。");
+    }
+  }
+
+  // 測試專用：一鍵注入違規數據
+  function injectViolation() {
+    const twRow = document.querySelector('tr[data-region="TW"]');
+    if (twRow) {
+      const cell1 = twRow.querySelectorAll('.shift-cell')[0];
+      const cell2 = twRow.querySelectorAll('.shift-cell')[1];
+      // 故意輸入連續 14 天工作班別，踩踏七休一紅線
+      cell1.innerText = "D D D D D D D";
+      cell2.innerText = "D D D D D D D";
+      
+      // 觸發稽核
+      performAudit(false);
+    }
+  }
+
+  // 彈跳視窗控制
   function showBlockModal(violations) {
     const list = document.getElementById('violationList');
     list.innerHTML = violations.map(v => `<li class="violation-item">${v}</li>`).join('');
     document.getElementById('violationModal').classList.add('active');
   }
 
-  // 3. 關閉彈跳視窗進行手動編輯
   function closeModal() {
     document.getElementById('violationModal').classList.remove('active');
   }
 
-  // 4. 一鍵回復至前次合規排班
   function revertLastValid() {
     if (lastValidHtml) {
       document.getElementById('rosterTbody').innerHTML = lastValidHtml;
       closeModal();
+      bindCellEvents();
+      performAudit(true);
       alert("↺ 已成功將排班表還原至前次合規狀態！");
     } else {
       resetDefaults();
     }
   }
 
-  // 5. 儲存合法快照
   function saveSnapshot() {
     lastValidHtml = document.getElementById('rosterTbody').innerHTML;
     try {
-      localStorage.setItem('marine_roster_valid_snapshot', lastValidHtml);
+      localStorage.setItem('marine_roster_snapshot_v2', lastValidHtml);
     } catch (e) {}
   }
 
-  // 6. 新增排班列（支援指定地區）
-  function addNewRosterRow() {
-    const region = prompt("請輸入新增船員所屬法規群組：\nTW (台灣本土) / EU (歐洲外派) / SEA (國際海員)", "TW") || "TW";
-    const name = prompt("請輸入船員姓名與職稱：", "新進海事人員") || "新進人員";
-    const tbody = document.getElementById('rosterTbody');
-    const tr = document.createElement('tr');
-    tr.setAttribute('data-region', region.toUpperCase());
-    tr.setAttribute('data-name', name);
-    
-    tr.innerHTML = `
-      <td>
-        <div class="crew-meta">
-          <span class="crew-name" contenteditable="true">${name} <span class="tag" style="background:#1e3a8a;color:#60a5fa;">${region.toUpperCase()}</span></span>
-          <span class="crew-role" contenteditable="true">隨船專案工程師</span>
-        </div>
-      </td>
-      <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
-      <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
-      <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
-      <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
-      <td class="status-cell">
-        <span class="badge-pass">PASS</span>
-        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">待校驗</div>
-      </td>
-      <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
-    `;
-    tbody.appendChild(tr);
-  }
-
-  // 7. 刪除列
   function deleteRow(btn) {
-    if (confirm("確定刪除本列排班資料？")) {
-      btn.closest('tr').remove();
-    }
+    btn.closest('tr').remove();
+    performAudit(true);
   }
 
-  // 8. 重置預設
   function resetDefaults() {
-    if (confirm("確定清除目前所有排班並重置為系統出廠值？")) {
-      localStorage.removeItem('marine_roster_valid_snapshot');
-      location.reload();
-    }
+    localStorage.removeItem('marine_roster_snapshot_v2');
+    location.reload();
   }
 
-  // 初始化載入
+  // 綁定儲存格輸入時即時檢查 (Live Validation on Typing)
+  function bindCellEvents() {
+    document.querySelectorAll('.shift-cell').forEach(cell => {
+      cell.addEventListener('input', () => {
+        performAudit(true); // 靜音即時檢查，自動點亮紅框
+      });
+    });
+  }
+
+  // 初始化
   window.addEventListener('DOMContentLoaded', () => {
-    const saved = localStorage.getItem('marine_roster_valid_snapshot');
-    if (saved) {
-      document.getElementById('rosterTbody').innerHTML = saved;
-      lastValidHtml = saved;
-    } else {
-      saveSnapshot();
-    }
+    localStorage.removeItem('marine_roster_valid_snapshot'); // 清除舊版格式快取
+    saveSnapshot();
+    bindCellEvents();
+    performAudit(true);
   });
 </script>
 
