@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boskalis Marine Operations & Automated Rostering Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { background-color: #0b0f19; color: #94a3b8; padding: 28px; }
+  .container { max-width: 1440px; margin: 0 auto; }
+
+  /* Top Navigation */
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .logo-title { font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
+  
+  .nav-group { display: flex; align-items: center; gap: 12px; }
+  .mode-switch { display: flex; background: #131b2e; border: 1px solid #1e293b; border-radius: 6px; padding: 3px; gap: 3px; }
+  .mode-btn { padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 4px; border: none; cursor: pointer; color: #64748b; background: transparent; transition: all 0.2s; }
+  .mode-btn.active { background: #3b82f6; color: #ffffff; }
+
+  .lang-switch { display: flex; background: #131b2e; border: 1px solid #1e293b; border-radius: 6px; padding: 3px; }
+  .lang-btn { padding: 4px 12px; font-size: 13px; font-weight: 600; border-radius: 4px; border: none; cursor: pointer; color: #64748b; background: transparent; }
+  .lang-btn.active { background: #ffffff; color: #0b0f19; }
+
+  /* Summary Metrics */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #1e293b; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden; margin-bottom: 28px; }
+  .stat-card { background: #0e1526; padding: 20px 24px; }
+  .stat-title { font-size: 16px; font-weight: 700; color: #2dd4bf; margin-bottom: 4px; }
+  .stat-desc { font-size: 12px; color: #64748b; }
+
+  /* Dashboard Panels */
+  .view-panel { display: none; }
+  .view-panel.active { display: block; }
+
+  /* ================= ROSTERING MODULE STYLES ================= */
+  .roster-control-card { background: #0e1526; border: 1px solid #1e293b; border-radius: 12px; padding: 22px 24px; margin-bottom: 24px; }
+  .control-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px dashed #1e293b; padding-bottom: 14px; }
+  .control-title { font-size: 16px; font-weight: 700; color: #ffffff; }
+  
+  .filter-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .filter-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .filter-label { color: #64748b; font-weight: 600; }
+  .filter-select, .filter-input { background: #131b2e; border: 1px solid #1e293b; color: #f8fafc; border-radius: 6px; padding: 6px 12px; font-size: 13px; outline: none; }
+  .filter-select:focus, .filter-input:focus { border-color: #3b82f6; }
+  .run-btn { background: #059669; color: #ffffff; font-weight: 700; font-size: 13px; padding: 7px 18px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; }
+  .run-btn:hover { background: #10b981; }
+
+  /* Live Rule Banner */
+  .rule-banner { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .rule-card { background: #0e1526; border-radius: 10px; padding: 16px; border-left: 4px solid #3b82f6; border-top: 1px solid #1e293b; border-right: 1px solid #1e293b; border-bottom: 1px solid #1e293b; }
+  .rule-card.tw { border-left-color: #10b981; }
+  .rule-card.eu { border-left-color: #60a5fa; }
+  .rule-card.sea { border-left-color: #f59e0b; }
+  .rule-name { font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 6px; }
+  .rule-text { font-size: 12px; line-height: 1.6; color: #cbd5e1; }
+
+  /* Rostering Table */
+  .table-container { background: #0e1526; border: 1px solid #1e293b; border-radius: 12px; overflow-x: auto; margin-bottom: 24px; }
+  .roster-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
+  .roster-table th, .roster-table td { padding: 12px 10px; border-bottom: 1px solid #1a2333; }
+  .roster-table th { background: #131b2e; color: #94a3b8; font-weight: 600; white-space: nowrap; }
+  .roster-table tr:hover { background: #111a30; }
+
+  .badge-country { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 700; display: inline-block; }
+  .badge-tw { background: #064e3b; color: #34d399; }
+  .badge-eu { background: #1e3a8a; color: #60a5fa; }
+  .badge-sea { background: #451a03; color: #f59e0b; }
+
+  /* Shift Cells */
+  .cell-shift { display: inline-block; width: 32px; height: 32px; line-height: 32px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+  .shift-D { background: #1e3a8a; color: #93c5fd; }
+  .shift-N { background: #31135e; color: #d8b4fe; }
+  .shift-WS { background: #451a03; color: #fbbf24; }
+  .shift-OFF { background: #1c1917; color: #78716c; }
+  .shift-TR { background: #064e3b; color: #6ee7b7; }
+
+  .status-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 4px 8px; border-radius: 12px; font-weight: 600; }
+  .status-tag.pass { background: #064e3b; color: #34d399; }
+  .status-tag.warn { background: #451a03; color: #fbbf24; }
+  .status-tag.fail { background: #450a0a; color: #f87171; }
+
+  /* Interactive Checker Modal / Log Box */
+  .log-console { background: #050811; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; color: #a7f3d0; line-height: 1.6; max-height: 180px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Navigation -->
+  <div class="top-bar">
+    <div class="logo-title">Boskalis Taiwan • 海事跨國營運與自動排班系統</div>
+    <div class="nav-group">
+      <div class="mode-switch">
+        <button class="mode-btn active" id="btn-mode-roster" onclick="switchMainView('roster')">自動排班矩陣 (Automated Rostering)</button>
+        <button class="mode-btn" id="btn-mode-bench" onclick="switchMainView('bench')">用工合規基準 (Compliance Benchmark)</button>
+      </div>
+      <div class="lang-switch">
+        <button class="lang-btn active" id="lang-btn-zh" onclick="toggleLang('zh')">繁中</button>
+        <button class="lang-btn" id="lang-btn-en" onclick="toggleLang('en')">EN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI / Constraint Summary -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-title" id="kpi1-val">七休一限制引擎</div>
+      <div class="stat-desc" id="kpi1-desc">台灣籍連續出勤不得超過 6 日</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title" id="kpi2-val">MLC 2006 77h 閾值</div>
+      <div class="stat-desc" id="kpi2-desc">國際海員任意 7 天休息 >= 77h</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title" id="kpi3-val">183 天居住門檻</div>
+      <div class="stat-desc" id="kpi3-desc">歐洲專家在台稅務天數即時追蹤</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title" id="kpi4-val">24h 港口重疊期</div>
+      <div class="stat-desc" id="kpi4-desc">資深船長/主管無縫安全交接</div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 1: AUTOMATED ROSTERING SYSTEM ==================== -->
+  <div class="view-panel active" id="panel-roster">
+    
+    <!-- Real-time Rule Cards -->
+    <div class="rule-banner">
+      <div class="rule-card tw">
+        <div class="rule-name">🇹🇼 台灣隨船團隊 (LSA Engine)</div>
+        <div class="rule-text">採 2 週 On / 2 週 Off 循環。單日工時 8h，加計延長不超 12h。海況待命（Weather Standby）與當值嚴格拆分申報。</div>
+      </div>
+      <div class="rule-card eu">
+        <div class="rule-name">🇳🇱 歐洲外派幹部 (Expat Mobility)</div>
+        <div class="rule-text">採 4~6 週 On / 4~6 週 Off 循環。入台前 30 天取得 A 類許可，跨曆年停留未達 183 天免轉稅務居民。</div>
+      </div>
+      <div class="rule-card sea">
+        <div class="rule-name">🇵🇭 國際特種海員 (MLC 2006 / STCW)</div>
+        <div class="rule-text">採 4/8 三班制或 6/6 兩班制。24 小時內連續休息不低於 10 小時，7 天不低於 77 小時，嚴防港口國留置 (PSC)。</div>
+      </div>
+    </div>
+
+    <!-- Rostering Operations Bar -->
+    <div class="roster-control-card">
+      <div class="control-header">
+        <div class="control-title">離岸拋石/吊裝特種船 4 週自動排程面板 (Vessel: Boka Rock)</div>
+        <div class="filter-item">
+          <span class="badge-country badge-eu">D: 白班 12h</span>
+          <span class="badge-country badge-sea">N: 夜班 12h</span>
+          <span class="badge-country badge-tw">WS: 待命 8h</span>
+          <span class="badge-country" style="background:#262626; color:#a3a3a3;">OFF: 輪休</span>
+          <span class="badge-country" style="background:#064e3b; color:#34d399;">TR: 接駁/機場</span>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-item">
+          <span class="filter-label">選擇檢測船員:</span>
+          <select class="filter-select" id="crew-select">
+            <option value="TW">陳大偉 (TW - 本地海事測量員)</option>
+            <option value="EU">J. van Dijk (EU - 船長 Master A)</option>
+            <option value="SEA">R. Santos (SEA - 水手長 Bosun)</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <span class="filter-label">指派突增班別 (天數):</span>
+          <select class="filter-select" id="shift-type">
+            <option value="D">連續指派作業白班 (D)</option>
+            <option value="WS">遭遇東北季風待命 (WS)</option>
+            <option value="OFF">調度提早下船休假 (OFF)</option>
+          </select>
+        </div>
+        <button class="run-btn" onclick="executeScheduleValidation()">執行排程合規校驗 (Run Validation)</button>
+      </div>
+    </div>
+
+    <!-- Roster Grid Matrix -->
+    <div class="table-container">
+      <table class="roster-table">
+        <thead>
+          <tr>
+            <th>職位</th>
+            <th>國籍/姓名</th>
+            <th>第 1 週 (W1)</th>
+            <th>第 2 週 (W2)</th>
+            <th>第 3 週 (W3)</th>
+            <th>第 4 週 (W4)</th>
+            <th>累計作業</th>
+            <th>合規稽核狀態</th>
+          </tr>
+        </thead>
+        <tbody id="roster-body">
+          <tr>
+            <td><strong>船長 (Master A)</strong></td>
+            <td><span class="badge-country badge-eu">NL</span> J. van Dijk</td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-TR">TR</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>13 天 (156h)</td>
+            <td><span class="status-tag pass">● 在台累計 62 天 (安全)</span></td>
+          </tr>
+          <tr>
+            <td><strong>船長 (Master B)</strong></td>
+            <td><span class="badge-country badge-eu">BE</span> L. Claes</td>
+            <td>
+              <span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-TR">TR</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>15 天 (180h)</td>
+            <td><span class="status-tag pass">● W2-D7 完成 24h 港口交接</span></td>
+          </tr>
+          <tr id="row-tw">
+            <td><strong>本地測量工程師</strong></td>
+            <td><span class="badge-country badge-tw">TW</span> 陳大偉</td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-WS">WS</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-WS">WS</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span><span class="cell-shift shift-OFF">OFF</span>
+            </td>
+            <td>10 天 (116h)</td>
+            <td id="status-tw"><span class="status-tag pass">● 落實七休一；待命拆分申報</span></td>
+          </tr>
+          <tr>
+            <td><strong>水手長 (Bosun)</strong></td>
+            <td><span class="badge-country badge-sea">PH</span> R. Santos</td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>
+              <span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span><span class="cell-shift shift-D">D</span>
+            </td>
+            <td>28 天 (336h)</td>
+            <td><span class="status-tag pass">● 週休 84h >= 77h (MLC 合規)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Live Compliance Audit Logs -->
+    <div class="log-console" id="audit-log">
+      [SYSTEM READY] 演算法引擎載入完成。已啟動 Taiwan LSA §36, ILO MLC 2006 Reg 2.3 與 ITA 183-Day Tax Rule 交叉檢核...<br>
+      [OPTIMAL] 特種風電拋石船排程：當前所有船員排班均已符合最低安全配員 (Safe Manning) 與多軌法規限制。
+    </div>
+
+  </div>
+
+  <!-- ==================== VIEW 2: COMPLIANCE BENCHMARK (原合規基準) ==================== -->
+  <div class="view-panel" id="panel-bench">
+    <div style="background:#0e1526; border:1px solid #1e293b; border-radius:12px; padding:24px;">
+      <h3 style="color:#ffffff; margin-bottom:14px;">用工合規基準與雇傭架構核心清單</h3>
+      <p style="font-size:13px; line-height:1.7; color:#cbd5e1;">
+        • <strong>陸上辦公人員</strong>：完全適用台灣《勞動基準法》，勞退 6% 強制提繳，特休未休強制折算全額工資。<br>
+        • <strong>外海隨船工程師</strong>：需經勞資會議通過變形工時，防範天候待命衍生連續出勤超過 6 日之違規裁罰。<br>
+        • <strong>歐洲外派技術主管</strong>：需取得勞動部 A 類專業技術工作許可，嚴密控管單一曆年 183 天常設機構/個人綜所稅課稅門檻。<br>
+        • <strong>國際海事特種船員</strong>：完全依循 ILO MLC 2006 國際公約，每 7 天休息時間不得少於 77 小時，落實零仲介費政策。
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentLanguage = 'zh';
+
+  function switchMainView(viewKey) {
+    document.getElementById('panel-roster').classList.remove('active');
+    document.getElementById('panel-bench').classList.remove('active');
+    document.getElementById('btn-mode-roster').classList.remove('active');
+    document.getElementById('btn-mode-bench').classList.remove('active');
+
+    if (viewKey === 'roster') {
+      document.getElementById('panel-roster').classList.add('active');
+      document.getElementById('btn-mode-roster').classList.add('active');
+    } else {
+      document.getElementById('panel-bench').classList.add('active');
+      document.getElementById('btn-mode-bench').classList.add('active');
+    }
+  }
+
+  function toggleLang(lang) {
+    currentLanguage = lang;
+    document.getElementById('lang-btn-zh').className = 'lang-btn ' + (lang === 'zh' ? 'active' : '');
+    document.getElementById('lang-btn-en').className = 'lang-btn ' + (lang === 'en' ? 'active' : '');
+
+    if (lang === 'en') {
+      document.getElementById('kpi1-val').innerText = "One-Off-In-Seven Rule";
+      document.getElementById('kpi1-desc').innerText = "Max 6 consecutive duty days for TW crew";
+      document.getElementById('kpi2-val').innerText = "MLC 2006 77h Cap";
+      document.getElementById('kpi2-desc').innerText = "Min 77h rest per 7 days for mariners";
+      document.getElementById('kpi3-val').innerText = "183-Day Tax Presence";
+      document.getElementById('kpi3-desc').innerText = "Real-time residency tracking for expats";
+      document.getElementById('kpi4-val').innerText = "24h Handover Buffer";
+      document.getElementById('kpi4-desc').innerText = "Seamless Master sign-on/sign-off gap";
+    } else {
+      document.getElementById('kpi1-val').innerText = "七休一限制引擎";
+      document.getElementById('kpi1-desc').innerText = "台灣籍連續出勤不得超過 6 日";
+      document.getElementById('kpi2-val').innerText = "MLC 2006 77h 閾值";
+      document.getElementById('kpi2-desc').innerText = "國際海員任意 7 天休息 >= 77h";
+      document.getElementById('kpi3-val').innerText = "183 天居住門檻";
+      document.getElementById('kpi3-desc').innerText = "歐洲專家在台稅務天數即時追蹤";
+      document.getElementById('kpi4-val').innerText = "24h 港口重疊期";
+      document.getElementById('kpi4-desc').innerText = "資深船長/主管無縫安全交接";
+    }
+  }
+
+  // 模擬演算法合規校驗互動
+  function executeScheduleValidation() {
+    const crew = document.getElementById('crew-select').value;
+    const shift = document.getElementById('shift-type').value;
+    const logBox = document.getElementById('audit-log');
+    const timeStr = new Date().toLocaleTimeString();
+
+    if (crew === 'TW' && shift === 'D') {
+      // 觸發台灣勞基法七休一紅線
+      document.getElementById('status-tw').innerHTML = '<span class="status-tag fail">▲ 違反勞基法七休一 (連續 7 日)</span>';
+      logBox.innerHTML = `[${timeStr}] <span style="color:#f87171;">[VIOLATION REJECTED]</span> 演算法攔截：員工 陳大偉 連續出勤達 7 天，違反台灣《勞動基準法》第 36 條七休一強行限制！<br>` + logBox.innerHTML;
+    } else if (crew === 'EU' && shift === 'D') {
+      // 觸發 183 天預警
+      logBox.innerHTML = `[${timeStr}] <span style="color:#fbbf24;">[TAX ALERT]</span> 警告：船長 J. van Dijk 加上指派工時後，單一年度在台天數達 152 天，即將跨越 183 天所得稅居民申報門檻！<br>` + logBox.innerHTML;
+    } else {
+      // 合規正常通行
+      document.getElementById('status-tw').innerHTML = '<span class="status-tag pass">● 落實七休一；待命拆分申報</span>';
+      logBox.innerHTML = `[${timeStr}] <span style="color:#34d399;">[VALIDATION PASSED]</span> 排程重算完成：工時、STCW 休息時間與交接重疊期全數通過合規驗證。<br>` + logBox.innerHTML;
+    }
+  }
+</script>
+
+</body>
+</html>
