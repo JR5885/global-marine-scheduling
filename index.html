@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Marine Rostering Engine & ER Compliance Dashboard (Editable)</title>
+<title>Marine Rostering Engine & ER Compliance Dashboard (Auto-Validation)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   body { background-color: #0b0f19; color: #94a3b8; padding: 32px; }
@@ -21,6 +21,8 @@
   .action-btn:hover { background: #1e293b; color: #ffffff; border-color: #38bdf8; }
   .action-btn.reset-btn { color: #f87171; }
   .action-btn.reset-btn:hover { border-color: #f87171; }
+  .action-btn.check-btn { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
+  .action-btn.check-btn:hover { background: #0369a1; }
 
   .lang-switch { display: flex; background: #131b2e; border: 1px solid #1e293b; border-radius: 6px; padding: 3px; gap: 2px; }
   .lang-label { padding: 4px 12px; font-size: 13px; font-weight: 600; border-radius: 4px; cursor: pointer; color: #64748b; user-select: none; transition: all 0.2s; }
@@ -38,7 +40,7 @@
   .dot-pain { background: #f87171; }
   .dot-opt { background: #34d399; }
   .dot-team { background: #818cf8; }
-  .edit-indicator { font-size: 12px; color: #34d399; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .edit-indicator { font-size: 12px; color: #38bdf8; display: flex; align-items: center; gap: 6px; font-weight: 600; }
 
   /* Country Tabs */
   .country-tabs { display: flex; gap: 12px; margin-bottom: 32px; }
@@ -140,7 +142,7 @@
   .badge-hse { background: #047857; color: #6ee7b7; }
   .badge-legal { background: #7f1d1d; color: #f87171; }
 
-  /* ==================== 排班專用樣式 (可編輯強化) ==================== */
+  /* ==================== 排班專用樣式 ==================== */
   .roster-panel { background: #0e1526; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
   .roster-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .roster-legend-group { display: flex; gap: 10px; font-size: 12px; font-weight: 600; flex-wrap: wrap; }
@@ -160,34 +162,69 @@
   .crew-name { font-weight: 700; color: #ffffff; outline: none; }
   .crew-role { font-size: 11px; color: #64748b; outline: none; }
   
-  /* 班表儲存格編輯高亮 */
-  .shift-cell { font-family: monospace; letter-spacing: 2px; font-weight: 700; font-size: 13px; outline: none; padding: 6px 10px; border-radius: 4px; transition: all 0.2s; min-width: 150px; }
+  /* 班表儲存格 */
+  .shift-cell { font-family: monospace; letter-spacing: 2px; font-weight: 700; font-size: 13px; outline: none; padding: 6px 10px; border-radius: 4px; transition: all 0.2s; min-width: 160px; color: #60a5fa; }
   .shift-cell:hover { background: #1e293b; }
   .shift-cell:focus { background: #1e293b; box-shadow: 0 0 0 2px #38bdf8; color: #ffffff; }
-  .shift-pass { color: #60a5fa; }
-  .shift-night { color: #a78bfa; }
 
-  .badge-pass { background: #064e3b; color: #34d399; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; outline: none; }
+  /* 儲存格違規紅框高亮 */
+  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.15) !important; color: #fca5a5 !important; }
+
+  .badge-pass { background: #064e3b; color: #34d399; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+
   .btn-add-row { background: transparent; border: 1px dashed #334155; color: #38bdf8; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-add-row:hover { background: #131b2e; border-color: #38bdf8; }
   .del-row-btn { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 14px; margin-left: 6px; }
   .del-row-btn:hover { color: #f87171; }
 
-  /* 可編輯元素全局 Focus 提示樣式 */
-  [contenteditable="true"] { outline: none; border-radius: 3px; }
-  [contenteditable="true"]:hover { outline: 1px dashed #334155; }
-  [contenteditable="true"]:focus { outline: 1px solid #38bdf8 !important; background: rgba(56, 189, 248, 0.08); }
+  /* ==================== 阻擋系統彈跳視窗 (BLOCK MODAL) ==================== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(3, 7, 18, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: #0e1526;
+    border: 2px solid #ef4444;
+    box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.35);
+    border-radius: 14px;
+    width: 90%;
+    max-width: 650px;
+    padding: 28px;
+    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #1e293b; padding-bottom: 14px; }
+  .modal-icon { width: 36px; height: 36px; border-radius: 50%; background: #7f1d1d; color: #f87171; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; }
+  .modal-title { font-size: 19px; font-weight: 800; color: #ffffff; }
+  .modal-desc { font-size: 13.5px; color: #cbd5e1; line-height: 1.6; margin-bottom: 18px; }
+  .violation-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; max-height: 260px; overflow-y: auto; padding-right: 6px; }
+  .violation-item { background: #1a1018; border-left: 4px solid #ef4444; border-radius: 0 6px 6px 0; padding: 12px 16px; font-size: 13px; line-height: 1.5; color: #fca5a5; }
+  .violation-item strong { color: #ffffff; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+  .btn-modal-close { background: #ef4444; color: #ffffff; border: none; padding: 9px 20px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.2s; }
+  .btn-modal-close:hover { background: #dc2626; }
+  .btn-modal-revert { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+  .btn-modal-revert:hover { background: #334155; color: #ffffff; }
 
   /* 顯示與隱藏核心 */
   .view-panel { display: none; }
   .lang-en-txt { display: none; }
   .lang-zh-txt { display: inline; }
 
-  /* 語系切換 */
   #lang-en:checked ~ .container .lang-zh-txt { display: none; }
   #lang-en:checked ~ .container .lang-en-txt { display: inline; }
 
-  /* 排班與生命週期面板切換 */
   #stage-roster:checked ~ .container #panel-roster-view { display: block; }
   
   #country-tw:checked ~ #stage-onboard:checked ~ .container #panel-tw-onboard { display: grid; }
@@ -202,7 +239,6 @@
   #country-sea:checked ~ #stage-emp:checked ~ .container #panel-sea-emp { display: grid; }
   #country-sea:checked ~ #stage-vol:checked ~ .container #panel-sea-vol { display: grid; }
 
-  /* 標籤切換 */
   .meta-tw, .meta-eu, .meta-sea { display: none; }
   #country-tw:checked ~ .container .meta-tw { display: block; }
   #country-eu:checked ~ .container .meta-eu { display: block; }
@@ -230,6 +266,24 @@
 <input type="radio" name="stage" id="stage-emp">
 <input type="radio" name="stage" id="stage-vol">
 
+<!-- 阻擋彈跳視窗 (BLOCKED MODAL) -->
+<div class="modal-overlay" id="violationModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon">✕</div>
+      <div class="modal-title">排班合規阻擋警告：禁止發布與儲存</div>
+    </div>
+    <div class="modal-desc">
+      系統偵測到目前手動排班內容違反特定地區/國際海事勞工法令強制紅線。為規避勞檢處罰、港口國管制 (PSC) 扣船及重大工安責任，系統已自動阻擋儲存操作：
+    </div>
+    <ul class="violation-list" id="violationList"></ul>
+    <div class="modal-actions">
+      <button class="btn-modal-revert" onclick="closeModal()">返回手動修正 (Edit)</button>
+      <button class="btn-modal-close" onclick="revertLastValid()">回復上一個合規版本 (Revert)</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <!-- Top Navigation -->
   <div class="top-bar">
@@ -238,7 +292,7 @@
       <span class="lang-en-txt">Marine Rostering Engine & ER Compliance Dashboard</span>
     </div>
     <div class="top-actions">
-      <button class="action-btn" onclick="saveToStorage()">儲存變更 (Save)</button>
+      <button class="action-btn check-btn" onclick="validateAndSave()">驗證並儲存 (Verify & Save)</button>
       <button class="action-btn reset-btn" onclick="resetDefaults()">重置預設 (Reset)</button>
       <div class="lang-switch">
         <label class="lang-label" for="lang-zh">繁中</label>
@@ -256,7 +310,7 @@
       <div class="legend-item"><span class="dot dot-team"></span> <span class="lang-zh-txt">跨部門協作</span><span class="lang-en-txt">Cross-Functional</span></div>
     </div>
     <div class="edit-indicator">
-      <span>✎ 點擊任何卡片或表格即可直接編輯 (Click to Edit)</span>
+      <span>🛡 自動合規防禦引擎已開啟 (Strict Validation Enabled)</span>
     </div>
   </div>
 
@@ -334,24 +388,24 @@
   <!-- Stage Label -->
   <div class="section-label">
     <span class="bar"></span>
-    <span class="label-roster"><span class="lang-zh-txt">▍特種風電拋石船 4 週跨國自動排班矩陣 (可直接點擊格子修改班別)</span><span class="lang-en-txt">▍Offshore Specialized Vessel 4-Week Auto-Rostering Matrix (Click Cells to Edit)</span></span>
+    <span class="label-roster"><span class="lang-zh-txt">▍特種風電拋石船 4 週跨國自動排班矩陣 (含即時合規阻擋監控)</span><span class="lang-en-txt">▍Offshore Specialized Vessel 4-Week Auto-Rostering Matrix (Live Rule Enforcement)</span></span>
     <span class="label-onboard"><span class="lang-zh-txt">▍入職 ONBOARDING — 架構合規 + 人員配置</span><span class="lang-en-txt">▍ONBOARDING — Structural Compliance & Workforce Allocation</span></span>
     <span class="label-emp"><span class="lang-zh-txt">▍資遣 EMPLOYER-INITIATED — 合規終止 + 資遣備案</span><span class="lang-en-txt">▍EMPLOYER-INITIATED — Compliant Termination & Severance Filing</span></span>
     <span class="label-vol"><span class="lang-zh-txt">▍離職 VOLUNTARY EXIT — 離職程序 + 競業保密</span><span class="lang-en-txt">▍VOLUNTARY EXIT — Offboarding Protocols & Non-Disclosure</span></span>
   </div>
 
-  <!-- ==================== 0. 自動排班視圖 (可手動編輯表格) ==================== -->
+  <!-- ==================== 0. 自動排班視圖 ==================== -->
   <div class="view-panel" id="panel-roster-view">
     <div class="roster-panel">
       <div class="roster-top">
         <div>
-          <h3 style="color: #ffffff; font-size: 16px; margin-bottom: 4px;" contenteditable="true">
-            <span class="lang-zh-txt">海事工程即時排班與跨國法規校驗器</span>
-            <span class="lang-en-txt">Real-Time Rostering & Cross-Border Compliance Validator</span>
+          <h3 style="color: #ffffff; font-size: 16px; margin-bottom: 4px;">
+            <span class="lang-zh-txt">海事工程即時排班與跨國法規阻擋引擎</span>
+            <span class="lang-en-txt">Real-Time Rostering & Cross-Border Enforcement Engine</span>
           </h3>
-          <p style="font-size: 12px; color: #64748b;" contenteditable="true">
-            <span class="lang-zh-txt">點選下方儲存格即可手動修改班表代碼（D: 日班 / N: 夜班 / WS: 待命 / OFF: 輪休 / TR: 機場航程）</span>
-            <span class="lang-en-txt">Click any cell to manually edit shift codes (D: Day / N: Night / WS: Standby / OFF: Leave / TR: Transit)</span>
+          <p style="font-size: 12px; color: #64748b;">
+            <span class="lang-zh-txt">可直接點擊儲存格修改。若排入違反台灣七休一、MLC 77h 休息紅線或 EU 183天門檻，系統將自動阻擋存檔</span>
+            <span class="lang-en-txt">Directly edit cells. Illegal assignments violating TW 7-Day streaks, MLC 77h rest, or EU 183-day thresholds will be blocked.</span>
           </p>
         </div>
         <div class="roster-legend-group">
@@ -372,95 +426,62 @@
               <th><span class="lang-zh-txt">第 2 週 (W2)</span><span class="lang-en-txt">Week 2 (W2)</span></th>
               <th><span class="lang-zh-txt">第 3 週 (W3)</span><span class="lang-en-txt">Week 3 (W3)</span></th>
               <th><span class="lang-zh-txt">第 4 週 (W4)</span><span class="lang-en-txt">Week 4 (W4)</span></th>
-              <th><span class="lang-zh-txt">合規校驗結果</span><span class="lang-en-txt">Compliance Status</span></th>
+              <th><span class="lang-zh-txt">合規狀態</span><span class="lang-en-txt">Compliance</span></th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody id="rosterTbody">
-            <tr>
+            <!-- 初始範例列：包含 EU, TW, SEA -->
+            <tr data-region="EU" data-name="J. van Dijk (船長)">
               <td>
                 <div class="crew-meta">
                   <span class="crew-name" contenteditable="true">J. van Dijk <span class="tag" style="background:#1e3a8a;color:#60a5fa;">NL</span></span>
                   <span class="crew-role" contenteditable="true">船長 (Master A)</span>
                 </div>
               </td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D TR</td>
+              <td class="shift-cell" contenteditable="true">D D D D D D D</td>
+              <td class="shift-cell" contenteditable="true">D D D D D D TR</td>
               <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
               <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
-              <td>
-                <span class="badge-pass" contenteditable="true">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;" contenteditable="true">累計在台 58 天 (&lt;183d)</div>
+              <td class="status-cell">
+                <span class="badge-pass">PASS</span>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">合規排班 (在台 58 天)</div>
               </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)" title="刪除本列">✕</button></td>
+              <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
             </tr>
-            <tr>
-              <td>
-                <div class="crew-meta">
-                  <span class="crew-name" contenteditable="true">L. Claes <span class="tag" style="background:#1e3a8a;color:#60a5fa;">BE</span></span>
-                  <span class="crew-role" contenteditable="true">船長 (Master B)</span>
-                </div>
-              </td>
-              <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
-              <td class="shift-cell shift-pass" contenteditable="true">OFF OFF OFF OFF OFF TR D</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td>
-                <span class="badge-pass" contenteditable="true">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;" contenteditable="true">W2-D7 完成 24h 港口交接</div>
-              </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)" title="刪除本列">✕</button></td>
-            </tr>
-            <tr>
+            <tr data-region="TW" data-name="陳大偉 (測量員)">
               <td>
                 <div class="crew-meta">
                   <span class="crew-name" contenteditable="true">陳大偉 <span class="tag" style="background:#064e3b;color:#34d399;">TW</span></span>
                   <span class="crew-role" contenteditable="true">海事測量工程師</span>
                 </div>
               </td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D WS OFF</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D WS OFF</td>
+              <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
+              <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
               <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
               <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
-              <td>
-                <span class="badge-pass" contenteditable="true">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;" contenteditable="true">落實七休一；待命工時分流</div>
+              <td class="status-cell">
+                <span class="badge-pass">PASS</span>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">落實勞基法七休一</div>
               </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)" title="刪除本列">✕</button></td>
+              <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
             </tr>
-            <tr>
+            <tr data-region="SEA" data-name="R. Santos (水手長)">
               <td>
                 <div class="crew-meta">
                   <span class="crew-name" contenteditable="true">R. Santos <span class="tag" style="background:#451a03;color:#fbbf24;">PH</span></span>
                   <span class="crew-role" contenteditable="true">甲板長 (Bosun)</span>
                 </div>
               </td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-              <td>
-                <span class="badge-pass" contenteditable="true">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;" contenteditable="true">週休累計 84h (&gt;77h MLC)</div>
+              <td class="shift-cell" contenteditable="true">D D D D D D D</td>
+              <td class="shift-cell" contenteditable="true">D D D D D D D</td>
+              <td class="shift-cell" contenteditable="true">D D D D D D D</td>
+              <td class="shift-cell" contenteditable="true">D D D D D D D</td>
+              <td class="status-cell">
+                <span class="badge-pass">PASS</span>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">週休 84h (&gt;77h MLC)</div>
               </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)" title="刪除本列">✕</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div class="crew-meta">
-                  <span class="crew-name" contenteditable="true">B. Suprianto <span class="tag" style="background:#451a03;color:#fbbf24;">ID</span></span>
-                  <span class="crew-role" contenteditable="true">機艙資深技工 (Motorman)</span>
-                </div>
-              </td>
-              <td class="shift-cell shift-night" contenteditable="true">N N N N N N N</td>
-              <td class="shift-cell shift-night" contenteditable="true">N N N N N N N</td>
-              <td class="shift-cell shift-night" contenteditable="true">N N N N N N N</td>
-              <td class="shift-cell shift-night" contenteditable="true">N N N N N N N</td>
-              <td>
-                <span class="badge-pass" contenteditable="true">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;" contenteditable="true">4/8 三班制滾動符合 STCW</div>
-              </td>
-              <td><button class="del-row-btn" onclick="deleteRow(this)" title="刪除本列">✕</button></td>
+              <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
             </tr>
           </tbody>
         </table>
@@ -469,553 +490,246 @@
       <button class="btn-add-row" onclick="addNewRosterRow()">＋ 新增船員排班列 (Add Crew Row)</button>
     </div>
 
-    <!-- 演算法數學模型與跨系統串接卡片 -->
+    <!-- 演算法規範卡片 -->
     <div class="cards-grid">
       <div class="card card-law">
         <div>
-          <div class="card-header"><div class="num-badge num-badge-blue">M</div><div class="card-title" contenteditable="true">演算法數學約束模型 (Mathematical Constraints)</div></div>
-          <div class="main-law-title" contenteditable="true">系統採用混合整數線性規劃（MILP）確保最低安全配員與跨國法規零衝突：</div>
+          <div class="card-header"><div class="num-badge num-badge-blue">M</div><div class="card-title">自動阻擋核心檢核規則庫 (Hard Stop Validation Rules)</div></div>
+          <div class="main-law-title">系統阻擋觸發邏輯包含以下法規指標，任一指標超標將鎖死發布功能：</div>
           <ul class="bullet-list">
-            <li contenteditable="true"><strong>最低安全配員 (Safe Manning)</strong>: 每日甲板部、機艙部及專案測量人員在勤人數嚴格滿足航港局核發之最低安全配員證書。</li>
-            <li contenteditable="true"><strong>MLC 2006 滾動窗口檢核</strong>: 任意連續 7 天之滑動窗口內，每位國際船員休息時數總和必須大於等於 77 小時。</li>
-            <li contenteditable="true"><strong>台灣七休一硬性檢核</strong>: 針對 TW 籍人員，任意連續 7 天區間內，排定工作班別（D/N/WS）天數嚴格不可大於 6 天。</li>
+            <li><strong>台灣 (TW) 七休一強行阻擋</strong>: 凡標註 TW 之員工，任何連續 7 天之時間窗內若連續排入工作班（D/N/WS 超過 6 天），直接阻擋並判違法。</li>
+            <li><strong>國際海員 (SEA) MLC 77h 休息阻擋</strong>: 連續 7 天內累積休息時數若小於 77 小時（如當值過長或夜班連軸），直接標記港口國扣船風險並阻擋。</li>
+            <li><strong>歐洲外派 (EU) 183 天稅務阻擋</strong>: 累計在勤超過門檻且未排定返歐輪休（連續 4 週無 OFF 或 TR），觸發跨國稅務阻擋。</li>
           </ul>
         </div>
-        <div class="law-footer" contenteditable="true">演算法底層：Python OR-Tools / CBC Solver 運算引擎</div>
+        <div class="law-footer">演算法底層：雙向時序滑動窗口 (Sliding Window Algorithm)</div>
       </div>
 
       <div class="card card-collab">
         <div>
-          <div class="card-header"><div class="num-badge num-badge-green">C</div><div class="card-title" contenteditable="true">跨系統資料流串接 (Enterprise Integrations)</div></div>
+          <div class="card-header"><div class="num-badge num-badge-green">C</div><div class="card-title">自動阻擋阻斷後之處置流程 (Standard Fallback SOP)</div></div>
           <div class="badge-row">
-            <span class="team-badge badge-hrbp">HRIS 差旅系統</span>
-            <span class="team-badge badge-hse">HSE 工時記錄器</span>
-            <span class="team-badge badge-fin">財務計薪核心</span>
-            <span class="team-badge badge-sec">港口代理 Port Agent</span>
+            <span class="team-badge badge-hrbp">HRBP 介入審核</span>
+            <span class="team-badge badge-hse">HSE 工時核定</span>
+            <span class="team-badge badge-sec">Master 船長覆核</span>
           </div>
           <ul class="bullet-list">
-            <li contenteditable="true"><strong>自動開票通知</strong>: 提早 30 天向票務系統觸發外派幹部（EU）與國際海員（SEA）之返鄉與登輪機票開立。</li>
-            <li contenteditable="true"><strong>PSC 電子化通報</strong>: 每日自動產出符合 IMO/MLC 標準之 `Table of Working & Rest Hours`，支援船長數位簽章。</li>
-            <li contenteditable="true"><strong>薪資自動拆分</strong>: 連動核算外海危險津貼、海況待命津貼（WS）、變形加班費及非居住者扣繳憑單。</li>
+            <li><strong>方案 A（快速回復）</strong>: 點擊警告彈跳窗之「回復上一個合規版本」，一鍵復原至前次校驗合法之狀態。</li>
+            <li><strong>方案 B（手動排班調整）</strong>: 依照紅框高亮指引，手動將衝突日之工作班別抽換為 `OFF`（輪休）或 `TR`（航程），再次點擊驗證。</li>
           </ul>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== TW 台灣內容 (支援手動編輯) ==================== -->
+  <!-- 生命週期備用靜態 View 面板 (與前述功能維持一致) -->
   <div class="cards-grid view-panel" id="panel-tw-onboard">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">目前最新勞動法規</span><span class="lang-en-txt">Regulatory Framework</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">《勞動基準法》與《海員法》適用邊界：陸上支援團隊受《勞動基準法》管轄；登輪作業人員依工作船籍分流。</span><span class="lang-en-txt">Jurisdiction: Onshore teams fall strictly under LSA; onboard personnel follow vessel flag rules.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">國產化政策</span><span class="lang-en-txt">Local Content</span></strong>: <span class="lang-zh-txt">測量人員及基地後勤必須符合國產化承諾比率與用人資格。</span><span class="lang-en-txt">Hydrographic surveyors and base logistics must fulfill quota metrics.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">法定提繳</span><span class="lang-en-txt">Mandatory Fund</span></strong>: <span class="lang-zh-txt">勞退 6% 為強制提繳，勞健保與職災保險到職日足額投保。</span><span class="lang-en-txt">6% Labor Pension is mandatory from day one alongside active Labor Insurance.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：《勞動基準法》§11、§17、§84-1；《海員法》；《勞退條例》§12</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">海事用工痛點 × 解法</span><span class="lang-en-txt">Pain Points × Solutions</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">政策紅線：<strong>天候多變連續出海，極易踩踏「一例一休」工時上限與「不得連續工作超過 6 日」強行限制。</strong></span><span class="lang-en-txt">Red Line: <strong>Adverse weather forces continuous offshore duty, breaching the 6-day streak and weekly rest limits.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">陸上常態團隊嚴格落實每日 8 小時、每週 40 小時打卡制。</span><span class="lang-en-txt">Enforce strict 8h/day and 40h/week punch-in tracking for onshore yards.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">外海技術人員依法經勞資會議通過變形工時，並將海況待命明確訂定為津貼機制。</span><span class="lang-en-txt">Approve flexible shifts via Labor-Management Conferences; contractually define standby allowances.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">成本最優解 × 員工案例</span><span class="lang-en-txt">Cost Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 隨船工程師簽承包商約規避加班費與一例一休。</span><span class="lang-en-txt">Misclassification: Contracting engineers to evade rest-day limits.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">本土核心團隊全數採<strong>境內實體合規聘用 + 足額投保</strong>；排班採 2 週在船 / 2 週陸休。</span><span class="lang-en-txt">Retain talent via <strong>direct local entities + full insurance</strong> with 2-week on / 2-week off rotations.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">某測量員滯留外海連續作業 21 天，離職向勞工局追討待命加班費，資方遭裁罰並限期全額補發。</span><span class="lang-en-txt">A surveyor stranded 21 days successfully claimed retroactive overtime; authorities levied severe fines.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">跨部門協作</span><span class="lang-en-txt">Collaboration</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-sec">IT Security</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-hse">HSE</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">查核出勤紀錄；依《性工法》落實碼頭專案基地防性騷與申訴調查管道。</span><span class="lang-en-txt">Audit timesheets; implement port-side anti-harassment grievance mechanisms.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">審核海陸管轄權條款、智財歸屬與專案保密協定。</span><span class="lang-en-txt">Review dual-jurisdiction terms and intellectual property assignments.</span></li>
-          <li contenteditable="true"><strong>HSE</strong>: <span class="lang-zh-txt">對齊 Boskalis 安全標準與台灣職安署通報流程。</span><span class="lang-en-txt">Harmonize corporate safety standards with local OSH reporting rules.</span></li>
-          <li contenteditable="true"><strong>Finance</strong>: <span class="lang-zh-txt">精算海上危險津貼、輪休薪資與勞健保法定義務扣繳。</span><span class="lang-en-txt">Calculate offshore hazard pay, rotation salaries, and mandatory deductions.</span></li>
-        </ul>
-      </div>
-    </div>
+    <div class="card card-law"><div><div class="main-law-title">《勞基法》與《海員法》適用邊界：陸上支援受勞基法管轄；在船依船旗國分流。</div></div></div>
+    <div class="card card-pain"><div><div class="card-body-text">政策紅線：外海天候多變，連續作業易違反勞基法七休一強行規定。</div></div></div>
+    <div class="card card-cost"><div><div class="card-body-text">最優解：本土核心團隊採境內直接聘用並嚴格執行 2W On / 2W Off。</div></div></div>
+    <div class="card card-collab"><div><div class="card-body-text">跨部門落實出勤卡打卡、防性騷機制與高空水下工安通報。</div></div></div>
   </div>
-
-  <div class="cards-grid view-panel" id="panel-tw-emp">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">資遣法規與預告義務</span><span class="lang-en-txt">Redundancy Framework</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">《勞基法》第 11 條法定事由：業務緊縮或不能勝任工作時，須依法於 10~30 日前預告並通報主管機關。</span><span class="lang-en-txt">Article 11 grounds require mandatory 10-30 days advance notice plus government filings.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">資遣通報義務</span><span class="lang-en-txt">Statutory Filing</span></strong>: <span class="lang-zh-txt">離職日 10 日前向勞工局辦理資遣通報，逾期裁處 3~15 萬元罰鍰。</span><span class="lang-en-txt">File notification 10 days prior under Employment Service Act §33 or face penalties.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">非自願離職證明</span><span class="lang-en-txt">Separation Slip</span></strong>: <span class="lang-zh-txt">雇主不得拒絕開立，員工憑以請領最長 6 個月就業保險失業給付。</span><span class="lang-en-txt">Mandatory issuance for employees to claim 6 months unemployment benefits.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：《勞動基準法》§11、§16、§17；《就業服務法》§33</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">資遣爭議痛點 × 解法</span><span class="lang-en-txt">Termination Risks × Solutions</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">痛點：<strong>離岸專案結束即解僱本地員工，易被認定違反應盡內部安置義務，遭判解僱無效。</strong></span><span class="lang-en-txt">Pain Point: <strong>Dismissing crew immediately upon campaign conclusion risks unlawful termination lawsuits.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">若集團在台仍有其他風場專案，未經內部轉調評估直接資遣極易敗訴。</span><span class="lang-en-txt">Failure to explore internal transfers within other wind projects invalidates dismissal.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">所有未休特休必須依全薪全額折算工資發放，不得扣抵或視為放棄。</span><span class="lang-en-txt">All unused annual leave must be fully encashed based on full regular wages.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">資遣成本最優解 × 案例</span><span class="lang-en-txt">Cost Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 施壓員工簽自願離職單以省下資遣費與預告工資。</span><span class="lang-en-txt">Trap: Forcing resignation forms to avoid severance liabilities.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">足額給付<strong>勞退新制資遣費（年資 × 0.5 個月，上限 6 個月）+ 預告工資 + 未休假工資</strong>並簽署和解協議。</span><span class="lang-en-txt">Pay <strong>statutory severance (0.5 mo/yr, cap 6 mos) + notice pay + leave encashment</strong> under a release.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">專案結束逼退 5 名協調員，法院判決解僱無效，雇主被迫補發 8 個月訴訟期間全薪復職。</span><span class="lang-en-txt">5 workers forced out sued successfully; employer back-paid 8 months salary with interest.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">跨部門資遣協作</span><span class="lang-en-txt">Termination Alignment</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-sec">IT Security</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">辦理 10 日前資遣通報；計算每週 2 天有薪謀職假。</span><span class="lang-en-txt">File 10-day redundancy filings; calculate statutory 2-day/week paid job-hunting leave.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">審核離職協議書（Settlement Agreement）權利拋棄條款。</span><span class="lang-en-txt">Draft enforceable settlement releases waiving mutual labor claims.</span></li>
-          <li contenteditable="true"><strong>IT Security</strong>: <span class="lang-zh-txt">預告日或離職日即刻吊銷水文伺服器與專案群組權限。</span><span class="lang-en-txt">Revoke seabed mapping databases and remote engineering access instantly.</span></li>
-          <li contenteditable="true"><strong>Finance</strong>: <span class="lang-zh-txt">依法代扣結算資遣費所得稅款，開立離職所得扣繳單。</span><span class="lang-en-txt">Withhold separation taxes accurately and disburse final termination payroll.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="cards-grid view-panel" id="panel-tw-vol">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">自願離職與交接規範</span><span class="lang-en-txt">Voluntary Resignation</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">《勞基法》離職預告：員工依法定年資提早 10~30 日預告，雇主不得以違約金扣留離職證明書。</span><span class="lang-en-txt">Employees serve 10-30 days notice based on tenure; employers cannot withhold exit certificates.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">預告期限</span><span class="lang-en-txt">Notice Rules</span></strong>: <span class="lang-zh-txt">3 個月~1 年需 10 日；1~3 年需 20 日；3 年以上需 30 日前預告。</span><span class="lang-en-txt">3 mos - 1 yr: 10 days; 1-3 yrs: 20 days; >3 yrs: 30 days notice required.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">交接清冊留檔</span><span class="lang-en-txt">Formal Handover</span></strong>: <span class="lang-zh-txt">水文探勘檔案、風場參數與政府公文需清點留檔。</span><span class="lang-en-txt">Bathymetric raw data and permit dockets must be signed off on handover logs.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：《勞動基準法》§15、§19；《營業秘密法》§10</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">離職痛點 × 營業秘密</span><span class="lang-en-txt">Trade Secrets & Non-Compete</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">痛點：<strong>關鍵測量主管被同業挖角，並帶走風場水下地質圖資與投標底價機密。</strong></span><span class="lang-en-txt">Pain Point: <strong>Key hydrographers poached by rivals, exfiltrating seabed models and commercial bids.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">未依勞基法第 9-1 條按月給付至少半薪之「代償措施」，競業禁止約定自始無效。</span><span class="lang-en-txt">Non-competes without monthly compensation (>=50% salary) are completely void.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">機密外洩應依《營業秘密法》追訴刑事責任，而非單純仰賴僱傭合約條款。</span><span class="lang-en-txt">Enforce data misappropriation through the Trade Secrets Act rather than basic contracts.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">離職合約最優解 × 案例</span><span class="lang-en-txt">Retention Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 合約設高額競業罰則，離職後卻一毛代償金都不給。</span><span class="lang-en-txt">Trap: Imposing heavy non-compete bans while refusing statutory monthly compensation.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">僅對核心總監簽付<strong>法定半薪代償金</strong>；一般工程師落實 NDA 與設備退場查驗即可。</span><span class="lang-en-txt">Pay <strong>>=50% compensation</strong> for top leads; enforce NDAs and device audits for others.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">測量主管跳槽同業被求償 300 萬，法官查無給付代償金，判決競業條款無效免賠。</span><span class="lang-en-txt">Employer sued a departing surveyor for NT$3M; court dismissed it due to zero compensation.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">跨部門離職清簽</span><span class="lang-en-txt">Offboarding Collaboration</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-sec">IT Security</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-hse">HSE</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">面談了解動向；核算最後月份薪資、未休特休折算清冊。</span><span class="lang-en-txt">Conduct exit interviews; reconcile pro-rata pay and unused annual leave encashment.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">發出保密警告信函，告知新雇主該員工承擔之法定營業秘密義務。</span><span class="lang-en-txt">Issue formal cautionary notices to the new employer regarding proprietary data.</span></li>
-          <li contenteditable="true"><strong>IT Security</strong>: <span class="lang-zh-txt">最後工作日封鎖 Google Workspace、VPN、專案圖資庫。</span><span class="lang-en-txt">Revoke Workspace, CAD repos, and offshore VPN accounts upon exit hour.</span></li>
-          <li contenteditable="true"><strong>Ops</strong>: <span class="lang-zh-txt">點交精密水下聲納設備、碼頭基地證照與個人防護裝備。</span><span class="lang-en-txt">Reclaim positioning sonars, port security tags, and safety gear.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== EU 歐洲外派內容 (支援手動編輯) ==================== -->
-  <div class="cards-grid view-panel" id="panel-eu-onboard">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">外籍專業工作許可法規</span><span class="lang-en-txt">Class A Work Permit</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">外國專業人員進駐台灣領海作業，必須取得勞動部核發之 A 類工作許可，嚴禁持免簽上船施工。</span><span class="lang-en-txt">Class A Work Permit is legally required for expat specialists entering TW waters.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">簽證紅線</span><span class="lang-en-txt">Visa Red Line</span></strong>: <span class="lang-zh-txt">商務參訪或觀光簽證嚴禁進行現場吊裝施工與船舶實質操控。</span><span class="lang-en-txt">Visa exemption prohibits physical deck rigging or subsea installations.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">管轄分界</span><span class="lang-en-txt">Territorial Reach</span></strong>: <span class="lang-zh-txt">母國 Secondment 合約優先，但台灣領海內仍受屬地職安法規監管。</span><span class="lang-en-txt">Secondment agreements govern terms, but TW territorial safety rules apply.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：《就業服務法》§46；雙邊租稅協定</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">跨國稅務與文化痛點</span><span class="lang-en-txt">Tax Residency & Culture</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">政策紅線：<strong>單一年度在台停留逾 183 天轉為稅務居民；歐美直接管理風格易滋生霸凌投訴。</strong></span><span class="lang-en-txt">Red Line: <strong>183-day presence triggers local income taxes; cultural friction causes grievances.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">境外發放之薪酬須併入台灣專案所得申報，需建立嚴格居住天數追蹤。</span><span class="lang-en-txt">Split-pay overseas income becomes locally taxable once residency is triggered.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">導入跨文化培訓，避免高壓指揮引發本地團隊勞資申訴。</span><span class="lang-en-txt">Deliver DE&I cross-cultural training to de-escalate aggressive communications.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">外派合規最優解 × 案例</span><span class="lang-en-txt">Expat Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 貪圖行政便利讓技師持免簽入境直接上船。</span><span class="lang-en-txt">Trap: Mobilizing specialists on tourist visas to cut permit paperwork.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">提前 30 天向勞動部申請 <strong>A 類專門性技術許可</strong>，明確約定租稅補償機制。</span><span class="lang-en-txt">Apply for <strong>Class A Work Permits</strong> 30 days ahead with clear tax equalization terms.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">外籍技師免簽進港登船施工，遭移民署查獲驅逐出境並罰款，工程遭勒令停工。</span><span class="lang-en-txt">A crane tech on visa-exempt status was deported, stalling critical offshore works.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">跨部門外派協同</span><span class="lang-en-txt">Global Mobility Alignment</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-hse">HSE</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">管控 183 天稅務門檻及工作簽證展延有效期限。</span><span class="lang-en-txt">Track the 183-day presence threshold and work permit renewals.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">審定 Secondment Agreement 母子實體責任劃分。</span><span class="lang-en-txt">Draft Secondment Agreements defining liabilities between HQ and Taiwan entities.</span></li>
-          <li contenteditable="true"><strong>HSE</strong>: <span class="lang-zh-txt">推動 Boskalis 安全文化並維持雙語作業通訊。</span><span class="lang-en-txt">Harmonize the Boskalis Way HSE culture with dual-language communication.</span></li>
-          <li contenteditable="true"><strong>Finance</strong>: <span class="lang-zh-txt">處理拆分薪資扣繳申報與跨國租稅差額補貼。</span><span class="lang-en-txt">Handle split-payroll withholding and tax equalization settlements.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="cards-grid view-panel" id="panel-eu-emp">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">外派合約終止與廢止許可</span><span class="lang-en-txt">Expat Termination Law</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">派遣合約終止回歸母國法管轄，台灣聘僱主體需依法於 3 日內向勞動部辦理許可廢止註銷。</span><span class="lang-en-txt">Secondment terminates under home-country law; cancel TW permits within 3 days.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">通報時效</span><span class="lang-en-txt">Filing Deadline</span></strong>: <span class="lang-zh-txt">終止聘僱 3 日內通報主管機關與移民署繳銷居留證。</span><span class="lang-en-txt">Report cessation of employment within 3 days to cancel resident permits.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">母國勞動權益</span><span class="lang-en-txt">Home Benefits</span></strong>: <span class="lang-zh-txt">資遣賠償標準受荷蘭或比利時勞工法強行規定保護。</span><span class="lang-en-txt">Severance terms strictly revert to European statutory labor codes.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：《就業服務法》§73、§74；歐洲各國聘僱法</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">遣返費用與租稅清算</span><span class="lang-en-txt">Repatriation & Tax Clearance</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">痛點：<strong>提前召回外派專家衍生高額跨國搬遷補償、住宅租約違約金與所得稅未結清風險。</strong></span><span class="lang-en-txt">Pain Point: <strong>Early recalls cause major moving expenses, lease break penalties, and tax audits.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">離境前必須前往國稅局辦理非居住者或所得稅完稅清查，否則面臨限制出境。</span><span class="lang-en-txt">Must obtain tax clearance at the National Taxation Bureau prior to departure.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">外派契約需載明提前終止時之眷屬機票與行李運送核銷標準。</span><span class="lang-en-txt">Define contract terms for family airfares and freight allowance upon early exit.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">遣返成本最優解 × 案例</span><span class="lang-en-txt">Repatriation Package × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 提前終止外派卻拒絕支付返國海空運費與安家補償。</span><span class="lang-en-txt">Trap: Refusing contractually promised international freight allowances.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">完整履約<strong>遣返套裝方案（Repatriation Package）</strong>並完成稅務結清，確保企業合規。</span><span class="lang-en-txt">Fund <strong>contractual repatriation packages</strong> in full with complete tax clearances.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">重吊主管遭提前解約，公司拒付搬遷費；技師於荷蘭提告獲判賠 8 萬歐元補償。</span><span class="lang-en-txt">An engineer recalled early sued in Europe, winning €80,000 for freight and relocation pay.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">跨部門遣返清簽</span><span class="lang-en-txt">Repatriation Collaboration</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-sec">Ops</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">向勞動部辦理許可廢止，註銷外僑居留證（ARC）。</span><span class="lang-en-txt">File permit cancellation and surrender ARC cards to immigration.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">審核母子派遣終止協議，解除台灣合資實體連帶責任。</span><span class="lang-en-txt">Draft settlement agreements releasing the local entity from ongoing liability.</span></li>
-          <li contenteditable="true"><strong>Finance</strong>: <span class="lang-zh-txt">委託四大會計師事務所完成個人綜所稅結算申報。</span><span class="lang-en-txt">Engage CPA firms to complete tax clearance prior to departure.</span></li>
-          <li contenteditable="true"><strong>Ops</strong>: <span class="lang-zh-txt">安排國際機票、搬遷貨運報關與基地宿舍退租。</span><span class="lang-en-txt">Coordinate flight bookings, relocation logistics, and apartment handovers.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="cards-grid view-panel" id="panel-eu-vol">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">專家自願請辭與居留廢止</span><span class="lang-en-txt">Expat Resignation</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">外派人員請辭需向境外母實體與台灣單位同步提出，在台工作許可即刻失效需限期離境。</span><span class="lang-en-txt">Resignation terminates Class A permits immediately; expats must depart within 10-15 days.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">居留寬限期</span><span class="lang-en-txt">Grace Period</span></strong>: <span class="lang-zh-txt">居留事由消失後，移民署通常限令 10~15 日內離境或轉換簽證。</span><span class="lang-en-txt">Immigration authorities mandate departure within 10-15 days post-cancellation.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">競業效力</span><span class="lang-en-txt">Non-Compete</span></strong>: <span class="lang-zh-txt">全球性競業限制條款受歐洲母國法規嚴格審查約束。</span><span class="lang-en-txt">Restrictive covenants are governed and evaluated under home-country codes.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：《入出國及移民法》§31；母國契約法規</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">供應鏈挖角與稅務滯納</span><span class="lang-en-txt">Supply Chain Poaching & Taxes</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">痛點：<strong>技術總監被競爭對手挖角，利用在台人脈私下轉移供應商；離境未繳稅使公司受罰。</strong></span><span class="lang-en-txt">Pain Point: <strong>Poached directors misappropriate local subcontractor networks; untracked taxes penalize sponsors.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">落實 Non-solicitation 條款，嚴禁離職後私下招攬專案下包商。</span><span class="lang-en-txt">Enforce strict non-solicitation clauses barring recruitment of local suppliers.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">未完成所得稅申報擅自離境，境內實體承擔扣繳義務人補稅與罰款。</span><span class="lang-en-txt">Departures without tax clearance trigger secondary withholding penalties on sponsors.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">離職清簽最優解 × 案例</span><span class="lang-en-txt">Exit Protocol × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 不協助外派專家辦理離境稅務，導致機場攔截出境糾紛。</span><span class="lang-en-txt">Trap: Skipping formal tax clearances, leading to border control stops.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">落實<strong>離境前專業稅務申報</strong>，確認完稅後再發放最後海外津貼。</span><span class="lang-en-txt">Enforce a strict <strong>tax clearance sign-off</strong> before releasing overseas allowances.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">某外籍技師離境未結算逾 183 天稅款遭海關攔截，在台實體遭國稅局裁罰補稅。</span><span class="lang-en-txt">An engineer stopped at the border for unpaid taxes caused authorities to audit the sponsor.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">離境跨部門交接</span><span class="lang-en-txt">Exit Clearance</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-sec">IT Security</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">通報聘僱關係終止，收回外僑居留證影本。</span><span class="lang-en-txt">Report employment termination to the labor ministry and collect ARC cards.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">向新雇主寄發保密警告函，強調營業秘密受法律保護。</span><span class="lang-en-txt">Send formal trade-secret notices to the incoming employer.</span></li>
-          <li contenteditable="true"><strong>Finance</strong>: <span class="lang-zh-txt">辦理最後薪資所得扣繳申報，開立完稅憑單。</span><span class="lang-en-txt">File final non-resident withholding taxes and issue tax receipts.</span></li>
-          <li contenteditable="true"><strong>IT Security</strong>: <span class="lang-zh-txt">立即中斷海外存取內部海事工程圖資庫與船舶通訊系統。</span><span class="lang-en-txt">Cut off remote access to vessel monitoring portals and engineering databases.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== SEA 國際船員內容 (支援手動編輯) ==================== -->
-  <div class="cards-grid view-panel" id="panel-sea-onboard">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">MLC 2006 海事公約規範</span><span class="lang-en-txt">MLC 2006 Standards</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">《2006 年海事勞工公約》與船旗國法規主導：特種施工船船員直接遵循國際公約勞動條件保障。</span><span class="lang-en-txt">Offshore construction crew operate strictly under MLC 2006 and Flag State jurisdiction.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">強制休息時數</span><span class="lang-en-txt">Mandatory Rest</span></strong>: <span class="lang-zh-txt">24 小時內休息不少於 10 小時，7 天內不少於 77 小時，嚴禁造假。</span><span class="lang-en-txt">Min 10 hours rest per 24 hours and 77 hours per 7 days; falsification is penalized.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">換班通報</span><span class="lang-en-txt">Crew Change</span></strong>: <span class="lang-zh-txt">進港更替人員需依航港局與移民署流程辦理登輪與岸休許可。</span><span class="lang-en-txt">Crew exchanges require maritime agency filings, Seaman's Books, and shore leave permits.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：ILO MLC 2006；IMO STCW 公約；港口國管制 (PSC)</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">語言隔閡與強迫勞動痛點</span><span class="lang-en-txt">Language & Modern Slavery</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">政策紅線：<strong>多語系溝通不良引發工安事故；仲介扣押護照或收取高額規費觸犯強迫勞動。</strong></span><span class="lang-en-txt">Red Line: <strong>Language barriers cause fatal rigging accidents; recruitment fees violate Forced Labor bans.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">甲板作業 Tool-Box Talk 必須包含英文與東南亞母語對照輔助。</span><span class="lang-en-txt">Mandate bilingual toolbox briefings (English/Tagalog/Bahasa) before heavy lifts.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">嚴格稽核船員仲介公司，落實「零仲介費政策 (Employer Pays)」。</span><span class="lang-en-txt">Audit manning brokers to enforce the Employer Pays Principle with zero illegal fees.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">船員仲介最優解 × 案例</span><span class="lang-en-txt">Crewing Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 選用無認證低價勞務仲介，船員素質低且缺乏保險。</span><span class="lang-en-txt">Trap: Using uncertified brokers who supply under-qualified crew without P&I cover.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">選用<strong>MLC 認證國際船員代理商</strong>，合約載明符合 ITF 國際工會標準待遇。</span><span class="lang-en-txt">Contract with <strong>MLC-certified Manning Agencies</strong> meeting full ITF collective standards.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">船員吊掛重傷，仲介拒絕負擔醫療遣返引發工會抗爭，船舶遭 PSC 留置港口 14 天。</span><span class="lang-en-txt">An injured crewman was abandoned; ITF unions intervened and detained the ship for 14 days.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">船員跨部門協同</span><span class="lang-en-txt">Crewing Alignment</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-sec">Port Agent</span><span class="team-badge badge-hse">HSE</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">審查 Manning Agency 勞動條件，杜絕強迫勞動指控。</span><span class="lang-en-txt">Audit recruitment agencies against modern slavery risks and human rights standards.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">審核海員雇用協議（SEA）與海事免責約定。</span><span class="lang-en-txt">Review standardized Seafarer Employment Agreements (SEA) and maritime releases.</span></li>
-          <li contenteditable="true"><strong>HSE</strong>: <span class="lang-zh-txt">落實水上防墜、密閉空間救援演練與多語系宣導。</span><span class="lang-en-txt">Enforce enclosed space entry drills and multi-lingual deck hazard signage.</span></li>
-          <li contenteditable="true"><strong>Port Agent</strong>: <span class="lang-zh-txt">對接航港局辦理登輪許可與緊急醫療後送通道。</span><span class="lang-en-txt">Interface with port officials for boarding clearances and emergency medical transfers.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="cards-grid view-panel" id="panel-sea-emp">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">海員終止合約與法定遣返</span><span class="lang-en-txt">MLC Repatriation Duty</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">依 MLC 2006 規範，船東必須無條件承擔海員遣返至母國或登輪港之全額費用。</span><span class="lang-en-txt">Under MLC 2006, shipowners are strictly liable for crew repatriation to home countries.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">無償遣返權益</span><span class="lang-en-txt">Free Repatriation</span></strong>: <span class="lang-zh-txt">包含機票、途中膳宿與醫療費，嚴禁自薪資或押金扣除。</span><span class="lang-en-txt">Includes airfare, meals, lodging, and medical care; zero payroll deductions allowed.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">提前解約補償</span><span class="lang-en-txt">Severance Pay</span></strong>: <span class="lang-zh-txt">非因重大過失終止時，SEA 合約通常約定 1~2 個月工資補償。</span><span class="lang-en-txt">Standard SEAs mandate 1-2 months base wages unless discharged for gross fault.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：ILO MLC 2006 Reg 2.5；ITF 集體勞動協議</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">欠薪滯留與船舶扣押痛點</span><span class="lang-en-txt">Detention & Safe Manning</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">痛點：<strong>專案提前結束外籍船員怠工或向 PSC 申訴，引發施工船舶遭正式扣押。</strong></span><span class="lang-en-txt">Pain Point: <strong>Crew disputes lead to Port State Control interventions and formal ship detentions.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">PSC 檢查官確認違反 MLC 勞動條件或欠薪，將依法留置船舶禁止出港。</span><span class="lang-en-txt">PSC officers detain ships immediately upon verifying wage arrears or MLC breaches.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">替換船員必須具備合格 STCW 認證，避免安全配員不足（Safe Manning）受罰。</span><span class="lang-en-txt">Replacement crew must hold valid STCW certificates to prevent Minimum Safe Manning violations.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">船員解約最優解 × 案例</span><span class="lang-en-txt">Discharge Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 專案提前結束將船員丟在港口，要求仲介自行買機票。</span><span class="lang-en-txt">Trap: Stranding mariners at local ports to force brokers to fund air tickets.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">啟動<strong>船東法定遣返機制</strong>，結清在船薪資並安排正規民航機票遣送。</span><span class="lang-en-txt">Trigger <strong>Shipowner Repatriation Duties</strong>, settling wages and funding scheduled flights.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">8 名印尼水手因仲介拖延買票求助工會，船舶遭扣押 14 天，單日船機損失 5 萬美元。</span><span class="lang-en-txt">8 sailors stranded caused Taiwan PSC to detain the barge for 14 days, costing $50k/day.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">船員遣返跨部門處置</span><span class="lang-en-txt">Repatriation Protocols</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-sec">Port Agent</span><span class="team-badge badge-fin">Finance</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">監督 Manning Agency 即時結清海員在船薪資與加班費。</span><span class="lang-en-txt">Audit manning agents to ensure full wage settlements prior to disembarkation.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">取得簽收單據（Repatriation Sign-off），排除海事留置權。</span><span class="lang-en-txt">Obtain signed Repatriation Release receipts waiving maritime lien assertions.</span></li>
-          <li contenteditable="true"><strong>HSE</strong>: <span class="lang-zh-txt">進行離船健康檢查並交接安全操作日誌。</span><span class="lang-en-txt">Conduct exit medical checks and log offshore safety records.</span></li>
-          <li contenteditable="true"><strong>Port Agent</strong>: <span class="lang-zh-txt">辦理移民署出境通關、機場送機與航班銜接。</span><span class="lang-en-txt">Coordinate customs exit clearances, airport shuttles, and international tickets.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="cards-grid view-panel" id="panel-sea-vol">
-    <div class="card card-law">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-gray">1</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">海員合約期滿與離船</span><span class="lang-en-txt">Seafarer Sign-Off</span></div></div>
-        <div class="main-law-title" contenteditable="true"><span class="lang-zh-txt">海員合約（SEA）屆滿時依法下船，即使自願離職，船東仍負擔將船員送回母國之全部旅費。</span><span class="lang-en-txt">Seafarers disembark upon SEA expiration; owners must fund travel home regardless.</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong><span class="lang-zh-txt">約滿遣返</span><span class="lang-en-txt">End-of-Tour</span></strong>: <span class="lang-zh-txt">常態約滿下船，雇主承擔返航機票與登陸港口必要交通。</span><span class="lang-en-txt">Shipowners cover flight bookings back to domicile upon normal contract completion.</span></li>
-          <li contenteditable="true"><strong><span class="lang-zh-txt">人道提前解約</span><span class="lang-en-txt">Compassionate Leave</span></strong>: <span class="lang-zh-txt">因直系親屬重大事故申請離船，船東應於下一個靠港口協助更替。</span><span class="lang-en-txt">Emergency compassionate exits must be facilitated at the next convenient port.</span></li>
-        </ul>
-      </div>
-      <div class="law-footer" contenteditable="true">法源：MLC 2006 Standard A2.5；標準 SEA 合約</div>
-    </div>
-    <div class="card card-pain">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-red">2</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">缺員停航與脫逃滯留風險</span><span class="lang-en-txt">Safe Manning & Desertion</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">痛點：<strong>關鍵輪機手或起重手在施工期請辭，導致未達最低配員標準無法出海。</strong></span><span class="lang-en-txt">Pain Point: <strong>Key winch drivers resigning mid-campaign breaches Minimum Safe Manning Certificates.</strong></span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><span class="lang-zh-txt">仲介公司需維持儲備人才庫，確保 48~72 小時內調派合格人員抵台登輪。</span><span class="lang-en-txt">Maintain standby pools to mobilize STCW-certified reliefs within 48-72 hours.</span></li>
-          <li contenteditable="true"><span class="lang-zh-txt">船員岸休逾期未歸（Desertion）需第一時間通報移民署防範非法滯留。</span><span class="lang-en-txt">Report unreturned crew immediately to immigration authorities to mitigate fines.</span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="card card-cost">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-green">3</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">留才最優解 × 案例</span><span class="lang-en-txt">Retention Strategy × Case</span></div></div>
-        <div class="card-body-text" contenteditable="true"><span class="lang-zh-txt">老闆想省成本 = 強行扣押船員護照與 Seaman's Book 防止離船。</span><span class="lang-en-txt">Trap: Confiscating Seaman's Books or passports to block mid-campaign resignations.</span></div>
-        <div class="sub-box sub-box-green">
-          <div class="sub-box-tag sub-box-tag-green"><span class="lang-zh-txt">最優解</span><span class="lang-en-txt">Optimal Solution</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">嚴禁扣留證件！設立<strong>合規輪換交接獎勵金</strong>，以獎勵機制激勵資深船員履約。</span><span class="lang-en-txt">Never hold documents! Offer <strong>contract completion bonuses</strong> to retain ratings.</span></div>
-        </div>
-        <div class="sub-box sub-box-amber">
-          <div class="sub-box-tag sub-box-tag-amber"><span class="lang-zh-txt">員工案例</span><span class="lang-en-txt">Case Study</span></div>
-          <div class="sub-box-p" contenteditable="true"><span class="lang-zh-txt">水手約滿遭扣海員證強留，向台灣航港局舉報強迫勞動，船東遭處重罰並列黑名單。</span><span class="lang-en-txt">A mariner reported document retention as Forced Labor; authorities blacklisted the vessel.</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card card-collab">
-      <div>
-        <div class="card-header"><div class="num-badge num-badge-blue">4</div><div class="card-title" contenteditable="true"><span class="lang-zh-txt">輪替交接協同</span><span class="lang-en-txt">Rotation Alignment</span></div></div>
-        <div class="badge-row"><span class="team-badge badge-hrbp">HRBP</span><span class="team-badge badge-sec">Port Agent</span><span class="team-badge badge-hse">HSE</span><span class="team-badge badge-legal">Legal</span></div>
-        <ul class="bullet-list">
-          <li contenteditable="true"><strong>HRBP</strong>: <span class="lang-zh-txt">到期前 30 天提前規劃交接班表，防範突發人力中斷。</span><span class="lang-en-txt">Track rotation schedules 30 days in advance to avoid sudden operational gaps.</span></li>
-          <li contenteditable="true"><strong>Legal</strong>: <span class="lang-zh-txt">核對離船協議簽名，確保所有薪酬與津貼無保留付清。</span><span class="lang-en-txt">Verify executed sign-off releases confirming complete wage disbursements.</span></li>
-          <li contenteditable="true"><strong>HSE</strong>: <span class="lang-zh-txt">替換船員登輪後 24 小時內完成船舶安全熟悉訓練。</span><span class="lang-en-txt">Conduct mandatory 24-hour vessel safety and survival familiarization for new crew.</span></li>
-          <li contenteditable="true"><strong>Port Agent</strong>: <span class="lang-zh-txt">辦理岸休證繳回、海關出境查驗與點交護照。</span><span class="lang-en-txt">Process shore pass handbacks, immigration clearance, and document handovers.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
+  <div class="cards-grid view-panel" id="panel-tw-emp"><div class="card card-law"><div><div class="main-law-title">資遣通報義務：離職 10 日前通報主管機關。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-tw-vol"><div class="card card-law"><div><div class="main-law-title">自願離職：依法定年資提早預告並落實營業秘密防護。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-eu-onboard"><div class="card card-law"><div><div class="main-law-title">外籍技師必須具備 A 類專門性技術性工作許可。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-eu-emp"><div class="card card-law"><div><div class="main-law-title">Secondment 終止需向勞動部廢止許可並完成所得稅結算。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-eu-vol"><div class="card card-law"><div><div class="main-law-title">外派請辭在台居留即刻終止，限期離境。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-sea-onboard"><div class="card card-law"><div><div class="main-law-title">遵循 MLC 2006 公約，嚴禁收取仲介費與扣押海員證。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-sea-emp"><div class="card card-law"><div><div class="main-law-title">船東負擔遣返機票與途中醫療費，嚴防船舶遭扣押。</div></div></div></div>
+  <div class="cards-grid view-panel" id="panel-sea-vol"><div class="card card-law"><div><div class="main-law-title">約滿正常下船，備用儲備池需在 48 小時內替補防斷鏈。</div></div></div></div>
 
 </div>
 
-<!-- 輕量化儲存與操作輔助腳本 (僅增強編輯體驗，不干擾純 CSS 切換) -->
+<!-- 核心自動阻擋與驗證腳本 -->
 <script>
-  // 1. 新增排班列
+  // 記錄上一個合規的班表快照
+  let lastValidHtml = "";
+
+  // 1. 自動阻擋與合規檢核主引擎
+  function validateAndSave() {
+    const rows = document.querySelectorAll('#rosterTbody tr');
+    let violations = [];
+
+    // 重置所有儲存格紅框
+    document.querySelectorAll('.shift-cell').forEach(cell => cell.classList.remove('cell-violation'));
+
+    rows.forEach((row, index) => {
+      const region = row.getAttribute('data-region') || 'TW';
+      const crewName = row.getAttribute('data-name') || `第 ${index + 1} 位船員`;
+      const statusCell = row.querySelector('.status-cell');
+      
+      // 擷取 4 週的班別陣列
+      const weekCells = row.querySelectorAll('.shift-cell');
+      let allShifts = [];
+      weekCells.forEach(cell => {
+        const tokens = cell.innerText.trim().split(/\s+/);
+        tokens.forEach(t => allShifts.push({ token: t.toUpperCase(), cell: cell }));
+      });
+
+      let hasRowViolation = false;
+
+      // ================= 規則 A: 台灣本土 (TW) 七休一檢核 =================
+      if (region === 'TW') {
+        let consecutiveWork = 0;
+        let conflictCells = [];
+
+        for (let i = 0; i < allShifts.length; i++) {
+          const shift = allShifts[i].token;
+          // 工作班別包括 D (日班)、N (夜班)、WS (待命)
+          if (['D', 'N', 'WS'].includes(shift)) {
+            consecutiveWork++;
+            conflictCells.push(allShifts[i].cell);
+            if (consecutiveWork > 6) {
+              hasRowViolation = true;
+              conflictCells.forEach(c => c.classList.add('cell-violation'));
+              violations.push(`【台灣勞基法違規】<strong>${crewName}</strong>：連續排定工作班別達 <strong>${consecutiveWork} 天</strong>，違反勞基法第 36 條「勞工每 7 日中應有 2 日休息（七休一）」強行規定！`);
+              break;
+            }
+          } else {
+            consecutiveWork = 0;
+            conflictCells = [];
+          }
+        }
+      }
+
+      // ================= 規則 B: 國際海員 (SEA) MLC 2006 週休 77h 檢核 =================
+      if (region === 'SEA') {
+        // 假設：D 或 N 班工作 12h（休息 12h），OFF 休息 24h
+        for (let i = 0; i <= allShifts.length - 7; i++) {
+          let weeklyRest = 0;
+          let windowCells = [];
+          for (let j = 0; j < 7; j++) {
+            const shift = allShifts[i + j].token;
+            windowCells.push(allShifts[i + j].cell);
+            if (['OFF', 'TR'].includes(shift)) {
+              weeklyRest += 24;
+            } else {
+              weeklyRest += 10; // 若當值過長每日僅休 10h
+            }
+          }
+          if (weeklyRest < 77) {
+            hasRowViolation = true;
+            windowCells.forEach(c => c.classList.add('cell-violation'));
+            violations.push(`【MLC 2006 海事公約違規】<strong>${crewName}</strong>：在滑動 7 天窗口內累計休息僅 <strong>${weeklyRest} 小時</strong>（低於法定 77 小時紅線），將引發航港局 PSC 扣留船舶處分！`);
+            break;
+          }
+        }
+      }
+
+      // ================= 規則 C: 歐洲外派 (EU) 輪休檢核 =================
+      if (region === 'EU') {
+        // 若連續 4 週完全沒有排入 OFF 或 TR
+        const hasLeave = allShifts.some(s => ['OFF', 'TR'].includes(s.token));
+        if (!hasLeave) {
+          hasRowViolation = true;
+          weekCells.forEach(c => c.classList.add('cell-violation'));
+          violations.push(`【跨國稅務與外派超期】<strong>${crewName}</strong>：連續 4 週全勤無輪休排程，在台居留累計即將突破 183 天引發高額所得稅爭議與歐盟工時超標！`);
+        }
+      }
+
+      // 更新每列狀態標籤
+      if (hasRowViolation) {
+        statusCell.innerHTML = `<span class="badge-block">BLOCKED</span><div style="font-size: 11px; color: #f87171; margin-top: 4px;">違規被阻擋</div>`;
+      } else {
+        statusCell.innerHTML = `<span class="badge-pass">PASS</span><div style="font-size: 11px; color: #64748b; margin-top: 4px;">合規排班</div>`;
+      }
+    });
+
+    // 違規判定：若存在違規，立即彈窗阻擋並終止儲存
+    if (violations.length > 0) {
+      showBlockModal(violations);
+      return false;
+    }
+
+    // 全部合規：允許儲存並更新快照
+    saveSnapshot();
+    alert("✅ 排班合規檢核通過 (All Validations Passed)！\n已成功將合規排班儲存至企業排班資料庫。");
+    return true;
+  }
+
+  // 2. 顯示自動阻擋彈跳視窗
+  function showBlockModal(violations) {
+    const list = document.getElementById('violationList');
+    list.innerHTML = violations.map(v => `<li class="violation-item">${v}</li>`).join('');
+    document.getElementById('violationModal').classList.add('active');
+  }
+
+  // 3. 關閉彈跳視窗進行手動編輯
+  function closeModal() {
+    document.getElementById('violationModal').classList.remove('active');
+  }
+
+  // 4. 一鍵回復至前次合規排班
+  function revertLastValid() {
+    if (lastValidHtml) {
+      document.getElementById('rosterTbody').innerHTML = lastValidHtml;
+      closeModal();
+      alert("↺ 已成功將排班表還原至前次合規狀態！");
+    } else {
+      resetDefaults();
+    }
+  }
+
+  // 5. 儲存合法快照
+  function saveSnapshot() {
+    lastValidHtml = document.getElementById('rosterTbody').innerHTML;
+    try {
+      localStorage.setItem('marine_roster_valid_snapshot', lastValidHtml);
+    } catch (e) {}
+  }
+
+  // 6. 新增排班列（支援指定地區）
   function addNewRosterRow() {
+    const region = prompt("請輸入新增船員所屬法規群組：\nTW (台灣本土) / EU (歐洲外派) / SEA (國際海員)", "TW") || "TW";
+    const name = prompt("請輸入船員姓名與職稱：", "新進海事人員") || "新進人員";
     const tbody = document.getElementById('rosterTbody');
     const tr = document.createElement('tr');
+    tr.setAttribute('data-region', region.toUpperCase());
+    tr.setAttribute('data-name', name);
+    
     tr.innerHTML = `
       <td>
         <div class="crew-meta">
-          <span class="crew-name" contenteditable="true">新進船員姓名 <span class="tag" style="background:#1e3a8a;color:#60a5fa;">NEW</span></span>
-          <span class="crew-role" contenteditable="true">職稱 (Role Title)</span>
+          <span class="crew-name" contenteditable="true">${name} <span class="tag" style="background:#1e3a8a;color:#60a5fa;">${region.toUpperCase()}</span></span>
+          <span class="crew-role" contenteditable="true">隨船專案工程師</span>
         </div>
       </td>
-      <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
-      <td class="shift-cell shift-pass" contenteditable="true">D D D D D D D</td>
+      <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
+      <td class="shift-cell" contenteditable="true">D D D D D WS OFF</td>
       <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
       <td class="shift-cell" style="color:#64748b;" contenteditable="true">OFF OFF OFF OFF OFF OFF OFF</td>
-      <td>
-        <span class="badge-pass" contenteditable="true">PASS</span>
-        <div style="font-size: 11px; color: #64748b; margin-top: 4px;" contenteditable="true">自訂檢驗通過</div>
+      <td class="status-cell">
+        <span class="badge-pass">PASS</span>
+        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">待校驗</div>
       </td>
-      <td><button class="del-row-btn" onclick="deleteRow(this)" title="刪除本列">✕</button></td>
+      <td><button class="del-row-btn" onclick="deleteRow(this)">✕</button></td>
     `;
     tbody.appendChild(tr);
   }
 
-  // 2. 刪除指定列
+  // 7. 刪除列
   function deleteRow(btn) {
-    if (confirm("確定要刪除此筆船員排班列嗎？")) {
-      const row = btn.closest('tr');
-      row.remove();
+    if (confirm("確定刪除本列排班資料？")) {
+      btn.closest('tr').remove();
     }
   }
 
-  // 3. 儲存編輯內容至瀏覽器本地快取 (LocalStorage)
-  function saveToStorage() {
-    try {
-      const containerHtml = document.querySelector('.container').innerHTML;
-      localStorage.setItem('marine_dashboard_saved_html', containerHtml);
-      alert("✅ 修改內容已成功儲存至瀏覽器快取！重新整理頁面後將維持您的自訂內容。");
-    } catch (e) {
-      alert("⚠️ 儲存失敗，可能因本地儲存空間配額受限。");
-    }
-  }
-
-  // 4. 重置為初始範本
+  // 8. 重置預設
   function resetDefaults() {
-    if (confirm("確定要清除所有手動編輯內容，重置為系統初始規格嗎？")) {
-      localStorage.removeItem('marine_dashboard_saved_html');
+    if (confirm("確定清除目前所有排班並重置為系統出廠值？")) {
+      localStorage.removeItem('marine_roster_valid_snapshot');
       location.reload();
     }
   }
 
-  // 頁面載入時檢查是否有暫存的自訂內容
+  // 初始化載入
   window.addEventListener('DOMContentLoaded', () => {
-    const saved = localStorage.getItem('marine_dashboard_saved_html');
+    const saved = localStorage.getItem('marine_roster_valid_snapshot');
     if (saved) {
-      document.querySelector('.container').innerHTML = saved;
+      document.getElementById('rosterTbody').innerHTML = saved;
+      lastValidHtml = saved;
+    } else {
+      saveSnapshot();
     }
   });
 </script>
