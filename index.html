@@ -175,10 +175,11 @@
   .shift-cell { font-family: monospace; letter-spacing: 2px; font-weight: 700; font-size: 13px; outline: none; padding: 8px 12px; border-radius: 6px; transition: all 0.2s; min-width: 170px; color: #60a5fa; background: #0b0f19; border: 1px solid #1e293b; }
   .shift-cell:hover { border-color: #38bdf8; }
   .shift-cell:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25); color: #ffffff; background: #172033; }
-  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.2) !important; color: #fca5a5 !important; }
+  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.25) !important; color: #fca5a5 !important; }
 
   .badge-pass { background: #064e3b; color: #34d399; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
-  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; animation: blink 1s infinite alternate; }
+  @keyframes blink { from { opacity: 0.7; } to { opacity: 1; } }
 
   .btn-add-row { background: transparent; border: 1px dashed #334155; color: #38bdf8; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-add-row:hover { background: #131b2e; border-color: #38bdf8; }
@@ -492,7 +493,7 @@
               <td class="shift-cell" contenteditable="true">D D D D D D D</td>
               <td class="status-cell">
                 <span class="badge-pass">PASS</span>
-                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">週休 84h (>77h MLC)</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">週休 84h (&gt;77h MLC)</div>
               </td>
               <td><button class="action-btn" style="padding:2px 8px; font-size:11px;" onclick="deleteRow(this)">✕</button></td>
             </tr>
@@ -990,24 +991,22 @@
 
 </div>
 
-<!-- 核心自動阻擋與即時校驗腳本 -->
+<!-- 核心自動阻擋與即時校驗腳本 (修復版) -->
 <script>
   let lastValidHtml = "";
 
-  function parseShifts(text) {
-    return text
-      .replace(/[\r\n\t]+/g, ' ')
-      .replace(/[\u3000]/g, ' ')
-      .trim()
-      .split(/\s+/)
-      .map(s => s.toUpperCase())
-      .filter(s => s.length > 0);
+  // 1. 正規化抽取乾淨的班別代碼
+  function extractTokens(text) {
+    const matched = text.toUpperCase().match(/\b(D|N|WS|OFF|TR)\b/g);
+    return matched || [];
   }
 
+  // 2. 核心自動阻擋檢核引擎
   function performAudit(isSilent = false) {
     const rows = document.querySelectorAll('#rosterTbody tr');
     let violations = [];
 
+    // 重置所有紅框樣式
     document.querySelectorAll('.shift-cell').forEach(cell => cell.classList.remove('cell-violation'));
 
     rows.forEach((row, rowIndex) => {
@@ -1018,13 +1017,13 @@
 
       let allShifts = [];
       cells.forEach((cell, cellIndex) => {
-        const tokens = parseShifts(cell.innerText);
+        const tokens = extractTokens(cell.innerText);
         tokens.forEach(t => allShifts.push({ token: t, cell: cell, week: cellIndex + 1 }));
       });
 
-      let rowViolations = [];
+      let rowViolated = false;
 
-      // 1. 台灣 (TW) 七休一檢查：連續工作天數 (D, N, WS) 不得超過 6 天
+      // ================= 規則 1: 台灣 (TW) 七休一強行阻擋 =================
       if (region === 'TW') {
         let streak = 0;
         let streakCells = new Set();
@@ -1035,8 +1034,9 @@
             streak++;
             streakCells.add(allShifts[i].cell);
             if (streak > 6) {
+              rowViolated = true;
               streakCells.forEach(c => c.classList.add('cell-violation'));
-              rowViolations.push(`【台灣勞基法違規】<strong>${crewName}</strong>：連續工作班別達 <strong>${streak} 天</strong>，違反勞基法第 36 條「每七日中應有二日之休息（七休一）」強行規定！`);
+              violations.push(`【台灣勞基法違規】<strong>${crewName}</strong>：連續排定工作班別達 <strong>${streak} 天</strong>，違反勞基法第 36 條「每七日中應有二日休息（七休一）」強行規定！`);
               break;
             }
           } else {
@@ -1046,37 +1046,52 @@
         }
       }
 
-      // 2. 歐洲外派 (EU) 輪休與居留檢查：4 週排班中必須包含輪休 (OFF) 或航程 (TR)
+      // ================= 規則 2: 歐洲外派 (EU) 183 天與輪休阻擋 =================
       if (region === 'EU') {
         const hasLeave = allShifts.some(item => ['OFF', 'TR'].includes(item.token));
-        if (!hasLeave && allShifts.length >= 28) {
+        // 連續排班超過 21 天且無任何休假
+        if (!hasLeave && allShifts.length >= 21) {
+          rowViolated = true;
           cells.forEach(c => c.classList.add('cell-violation'));
-          rowViolations.push(`【歐洲外派超期阻擋】<strong>${crewName}</strong>：連續 4 週全勤無任何輪休 (OFF) 或航程 (TR)，即將觸發在台 183 天高額綜所稅居民門檻與歐盟工時超標！`);
+          violations.push(`【歐洲外派超期阻擋】<strong>${crewName}</strong>：連續 4 週全勤無任何輪休 (OFF) 或航程 (TR) 紀錄，將直接觸發在台 183 天個人綜所稅居民認定及歐盟工時超標！`);
         }
       }
 
-      // 3. 國際船員 (SEA) MLC 2006 格式檢查
+      // ================= 規則 3: 國際海員 (SEA) MLC 2006 週休 77h 阻擋 =================
       if (region === 'SEA') {
-        const invalidTokens = allShifts.filter(item => !['D', 'N', 'WS', 'OFF', 'TR'].includes(item.token));
-        if (invalidTokens.length > 0) {
-          invalidTokens.forEach(item => item.cell.classList.add('cell-violation'));
-          rowViolations.push(`【MLC 2006 格式錯誤】<strong>${crewName}</strong>：包含未定義的班別代碼，無法通過港口國管制 (PSC) 電子工時申報！`);
+        // D, N: 12h 工時 (休息 12h); WS: 4h 工時 (休息 20h); OFF, TR: 休息 24h
+        const restMap = { 'D': 12, 'N': 12, 'WS': 20, 'OFF': 24, 'TR': 24 };
+
+        for (let i = 0; i <= allShifts.length - 7; i++) {
+          let weeklyRest = 0;
+          let windowCells = new Set();
+          for (let j = 0; j < 7; j++) {
+            const item = allShifts[i + j];
+            weeklyRest += restMap[item.token] !== undefined ? restMap[item.token] : 10;
+            windowCells.add(item.cell);
+          }
+          if (weeklyRest < 77) {
+            rowViolated = true;
+            windowCells.forEach(c => c.classList.add('cell-violation'));
+            violations.push(`【MLC 2006 海事公約違規】<strong>${crewName}</strong>：任意滑動 7 天窗口內累積休息僅 <strong>${weeklyRest} 小時</strong>（低於法定 77 小時紅線），將觸發港口國管制 (PSC) 扣船處分！`);
+            break;
+          }
         }
       }
 
-      // 更新狀態標籤
-      if (rowViolations.length > 0) {
+      // 更新狀態徽章
+      if (rowViolated) {
         statusCell.innerHTML = `<span class="badge-block">BLOCKED</span><div style="font-size: 11px; color: #f87171; margin-top: 4px;">違規被阻擋</div>`;
-        violations.push(...rowViolations);
       } else {
         statusCell.innerHTML = `<span class="badge-pass">PASS</span><div style="font-size: 11px; color: #64748b; margin-top: 4px;">合規排班</div>`;
       }
     });
 
+    // 頂部橫幅連動
     const banner = document.getElementById('topAlertBanner');
     if (violations.length > 0) {
       banner.classList.add('active');
-      document.getElementById('bannerMsg').innerText = `目前存在 ${violations.length} 項重大法規違規，排班已被系統鎖定！`;
+      document.getElementById('bannerMsg').innerText = `目前存在 ${violations.length} 項重大法規違規，排班已被系統強制阻擋！`;
     } else {
       banner.classList.remove('active');
     }
@@ -1089,6 +1104,7 @@
     return violations.length === 0;
   }
 
+  // 3. 點擊「驗證並儲存」按鈕
   function validateAndSave() {
     const isClean = performAudit(false);
     if (isClean) {
@@ -1097,17 +1113,19 @@
     }
   }
 
+  // 4. 一鍵注入違規測試
   function injectViolation() {
     const twRow = document.querySelector('tr[data-region="TW"]');
     if (twRow) {
-      const cell1 = twRow.querySelectorAll('.shift-cell')[0];
-      const cell2 = twRow.querySelectorAll('.shift-cell')[1];
-      cell1.innerText = "D D D D D D D";
-      cell2.innerText = "D D D D D D D";
+      const cells = twRow.querySelectorAll('.shift-cell');
+      // 將第一週與第二週排滿日班 (連續 14 天工作)，踩踏七休一紅線
+      cells[0].innerText = "D D D D D D D";
+      cells[1].innerText = "D D D D D D D";
       performAudit(false);
     }
   }
 
+  // 5. 阻擋彈窗邏輯
   function showBlockModal(violations) {
     const list = document.getElementById('violationList');
     list.innerHTML = violations.map(v => `<li class="violation-item">${v}</li>`).join('');
@@ -1133,7 +1151,7 @@
   function saveSnapshot() {
     lastValidHtml = document.getElementById('rosterTbody').innerHTML;
     try {
-      localStorage.setItem('marine_roster_snapshot_v3', lastValidHtml);
+      localStorage.setItem('marine_roster_snapshot_fixed', lastValidHtml);
     } catch (e) {}
   }
 
@@ -1173,19 +1191,25 @@
   }
 
   function resetDefaults() {
-    localStorage.removeItem('marine_roster_snapshot_v3');
+    localStorage.removeItem('marine_roster_snapshot_fixed');
     location.reload();
   }
 
   function bindCellEvents() {
     document.querySelectorAll('.shift-cell').forEach(cell => {
-      cell.addEventListener('input', () => {
-        performAudit(true);
-      });
+      cell.removeEventListener('input', onCellInput);
+      cell.removeEventListener('blur', onCellInput);
+      cell.addEventListener('input', onCellInput);
+      cell.addEventListener('blur', onCellInput);
     });
   }
 
+  function onCellInput() {
+    performAudit(true);
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
+    localStorage.removeItem('marine_roster_snapshot_v3');
     saveSnapshot();
     bindCellEvents();
     performAudit(true);
