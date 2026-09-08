@@ -19,9 +19,9 @@
   .top-actions { display: flex; align-items: center; gap: 10px; }
   .action-btn { padding: 7px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; border: 1px solid #1e293b; background: #131b2e; color: #38bdf8; cursor: pointer; transition: all 0.2s; }
   .action-btn:hover { background: #1e293b; color: #ffffff; border-color: #38bdf8; }
-  .action-btn.check-btn { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
+  .action-btn.check-btn { background: #0284c7; color: #ffffff; border-color: #38bdf8; font-weight: 700; }
   .action-btn.check-btn:hover { background: #0369a1; }
-  .action-btn.inject-btn { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; }
+  .action-btn.inject-btn { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; font-weight: 700; }
   .action-btn.inject-btn:hover { background: #991b1b; }
   .action-btn.reset-btn { color: #f87171; }
 
@@ -36,16 +36,15 @@
   .alert-banner {
     display: none;
     background: #450a0a;
-    border: 1px solid #ef4444;
+    border: 2px solid #ef4444;
     border-radius: 8px;
     padding: 14px 20px;
     margin-bottom: 20px;
     color: #fca5a5;
-    font-size: 13.5px;
+    font-size: 14px;
     align-items: center;
     justify-content: space-between;
   }
-  .alert-banner.active { display: flex; }
   .alert-banner strong { color: #ffffff; }
 
   /* Legend Bar */
@@ -133,7 +132,6 @@
 
   .law-footer { font-size: 12px; color: #3b82f6; border-top: 1px dashed #1e293b; padding-top: 14px; }
 
-  /* Sub Box */
   .sub-box { border-radius: 8px; padding: 16px; margin-bottom: 14px; }
   .sub-box-green { background: #06281e; border: 1px solid #064e3b; }
   .sub-box-amber { background: #241808; border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0; }
@@ -142,7 +140,6 @@
   .sub-box-tag-amber { color: #f59e0b; }
   .sub-box-p { font-size: 12.5px; line-height: 1.6; color: #cbd5e1; }
 
-  /* Collab Badges */
   .badge-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
   .team-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 14px; }
   .badge-hrbp { background: #064e3b; color: #34d399; }
@@ -151,7 +148,7 @@
   .badge-hse { background: #047857; color: #6ee7b7; }
   .badge-legal { background: #7f1d1d; color: #f87171; }
 
-  /* ==================== 排班專用樣式 ==================== */
+  /* 排班專用樣式 */
   .roster-panel { background: #0e1526; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
   .roster-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .roster-legend-group { display: flex; gap: 10px; font-size: 12px; font-weight: 600; flex-wrap: wrap; }
@@ -175,33 +172,31 @@
   .shift-cell { font-family: monospace; letter-spacing: 2px; font-weight: 700; font-size: 13px; outline: none; padding: 8px 12px; border-radius: 6px; transition: all 0.2s; min-width: 170px; color: #60a5fa; background: #0b0f19; border: 1px solid #1e293b; }
   .shift-cell:hover { border-color: #38bdf8; }
   .shift-cell:focus { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25); color: #ffffff; background: #172033; }
-  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.25) !important; color: #fca5a5 !important; }
+  
+  /* 強制紅框樣式 */
+  .cell-violation { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.3) !important; color: #fca5a5 !important; }
 
   .badge-pass { background: #064e3b; color: #34d399; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
-  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; animation: blink 1s infinite alternate; }
-  @keyframes blink { from { opacity: 0.7; } to { opacity: 1; } }
+  .badge-block { background: #7f1d1d; color: #fca5a5; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
 
   .btn-add-row { background: transparent; border: 1px dashed #334155; color: #38bdf8; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-add-row:hover { background: #131b2e; border-color: #38bdf8; }
-  .del-row-btn { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 14px; margin-left: 6px; }
-  .del-row-btn:hover { color: #f87171; }
 
-  /* 彈跳視窗 */
+  /* 彈跳視窗樣式 */
   .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(3, 7, 18, 0.88);
+    background: rgba(3, 7, 18, 0.9);
     backdrop-filter: blur(8px);
-    z-index: 99999;
+    z-index: 999999;
     align-items: center;
     justify-content: center;
   }
-  .modal-overlay.active { display: flex; }
   .modal-box {
     background: #0e1526;
     border: 2px solid #ef4444;
-    box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.5);
     border-radius: 14px;
     width: 90%;
     max-width: 680px;
@@ -228,9 +223,7 @@
   #lang-en:checked ~ .container .lang-zh-txt { display: none; }
   #lang-en:checked ~ .container .lang-en-txt { display: inline; }
 
-  /* 排班視圖與合規四宮格視圖切換 */
   #stage-roster:checked ~ .container #panel-roster-view { display: block; }
-
   #country-tw:checked ~ #stage-onboard:checked ~ .container #panel-tw-onboard { display: grid; }
   #country-tw:checked ~ #stage-emp:checked ~ .container #panel-tw-emp { display: grid; }
   #country-tw:checked ~ #stage-vol:checked ~ .container #panel-tw-vol { display: grid; }
@@ -243,7 +236,6 @@
   #country-sea:checked ~ #stage-emp:checked ~ .container #panel-sea-emp { display: grid; }
   #country-sea:checked ~ #stage-vol:checked ~ .container #panel-sea-vol { display: grid; }
 
-  /* 標籤與數據切換 */
   .meta-tw, .meta-eu, .meta-sea { display: none; }
   #country-tw:checked ~ .container .meta-tw { display: block; }
   #country-eu:checked ~ .container .meta-eu { display: block; }
@@ -290,7 +282,7 @@
 </div>
 
 <div class="container">
-  <!-- 頂部即時警報 Banner (違規時常駐顯示) -->
+  <!-- 頂部即時警報 Banner -->
   <div class="alert-banner" id="topAlertBanner">
     <div>
       <strong>⚠️ 偵測到違規排班已被系統自動阻擋！</strong>
@@ -991,22 +983,24 @@
 
 </div>
 
-<!-- 核心自動阻擋與即時校驗腳本 (修復版) -->
+<!-- 核心自動阻擋與即時校驗腳本 -->
 <script>
   let lastValidHtml = "";
 
-  // 1. 正規化抽取乾淨的班別代碼
+  // 1. 純文字班別代碼抽取 (相容所有全形、半形及符號)
   function extractTokens(text) {
-    const matched = text.toUpperCase().match(/\b(D|N|WS|OFF|TR)\b/g);
-    return matched || [];
+    if (!text) return [];
+    const cleaned = text.toUpperCase().replace(/[^A-Z]/g, ' ');
+    const parts = cleaned.trim().split(/\s+/);
+    return parts.filter(p => ['D', 'N', 'WS', 'OFF', 'TR'].includes(p));
   }
 
-  // 2. 核心自動阻擋檢核引擎
+  // 2. 核心自動檢核與阻擋邏輯
   function performAudit(isSilent = false) {
     const rows = document.querySelectorAll('#rosterTbody tr');
     let violations = [];
 
-    // 重置所有紅框樣式
+    // 重置所有格子紅框
     document.querySelectorAll('.shift-cell').forEach(cell => cell.classList.remove('cell-violation'));
 
     rows.forEach((row, rowIndex) => {
@@ -1036,7 +1030,7 @@
             if (streak > 6) {
               rowViolated = true;
               streakCells.forEach(c => c.classList.add('cell-violation'));
-              violations.push(`【台灣勞基法違規】<strong>${crewName}</strong>：連續排定工作班別達 <strong>${streak} 天</strong>，違反勞基法第 36 條「每七日中應有二日休息（七休一）」強行規定！`);
+              violations.push(`【台灣勞基法違規】${crewName}：連續排定工作班別達 ${streak} 天，違反勞基法第 36 條「每七日中應有二日之休息（七休一）」強行規定！`);
               break;
             }
           } else {
@@ -1049,17 +1043,16 @@
       // ================= 規則 2: 歐洲外派 (EU) 183 天與輪休阻擋 =================
       if (region === 'EU') {
         const hasLeave = allShifts.some(item => ['OFF', 'TR'].includes(item.token));
-        // 連續排班超過 21 天且無任何休假
+        // 連續在船作業無排定返鄉輪休
         if (!hasLeave && allShifts.length >= 21) {
           rowViolated = true;
           cells.forEach(c => c.classList.add('cell-violation'));
-          violations.push(`【歐洲外派超期阻擋】<strong>${crewName}</strong>：連續 4 週全勤無任何輪休 (OFF) 或航程 (TR) 紀錄，將直接觸發在台 183 天個人綜所稅居民認定及歐盟工時超標！`);
+          violations.push(`【歐洲外派超期阻擋】${crewName}：連續 4 週全勤無任何輪休 (OFF) 或航程 (TR) 紀錄，將直接觸發在台 183 天高額綜所稅居民認定及歐盟工時超標！`);
         }
       }
 
       // ================= 規則 3: 國際海員 (SEA) MLC 2006 週休 77h 阻擋 =================
       if (region === 'SEA') {
-        // D, N: 12h 工時 (休息 12h); WS: 4h 工時 (休息 20h); OFF, TR: 休息 24h
         const restMap = { 'D': 12, 'N': 12, 'WS': 20, 'OFF': 24, 'TR': 24 };
 
         for (let i = 0; i <= allShifts.length - 7; i++) {
@@ -1073,13 +1066,13 @@
           if (weeklyRest < 77) {
             rowViolated = true;
             windowCells.forEach(c => c.classList.add('cell-violation'));
-            violations.push(`【MLC 2006 海事公約違規】<strong>${crewName}</strong>：任意滑動 7 天窗口內累積休息僅 <strong>${weeklyRest} 小時</strong>（低於法定 77 小時紅線），將觸發港口國管制 (PSC) 扣船處分！`);
+            violations.push(`【MLC 2006 海事公約違規】${crewName}：任意滑動 7 天窗口內累積休息僅 ${weeklyRest} 小時（低於法定 77 小時紅線），將觸發港口國管制 (PSC) 扣船處分！`);
             break;
           }
         }
       }
 
-      // 更新狀態徽章
+      // 更新狀態標籤
       if (rowViolated) {
         statusCell.innerHTML = `<span class="badge-block">BLOCKED</span><div style="font-size: 11px; color: #f87171; margin-top: 4px;">違規被阻擋</div>`;
       } else {
@@ -1087,17 +1080,22 @@
       }
     });
 
-    // 頂部橫幅連動
+    // 更新頂部 Banner 提示
     const banner = document.getElementById('topAlertBanner');
     if (violations.length > 0) {
-      banner.classList.add('active');
+      banner.style.display = 'flex';
       document.getElementById('bannerMsg').innerText = `目前存在 ${violations.length} 項重大法規違規，排班已被系統強制阻擋！`;
     } else {
-      banner.classList.remove('active');
+      banner.style.display = 'none';
     }
 
+    // 觸發阻擋彈窗（雙重保障）
     if (!isSilent && violations.length > 0) {
       showBlockModal(violations);
+      // 原生彈窗防禦：絕對不被 CSS 屏蔽
+      setTimeout(() => {
+        alert("【系統強制阻擋 BLOCKED】\n\n" + violations.map((v, idx) => `${idx + 1}. ` + v.replace(/<[^>]*>/g, '')).join("\n\n"));
+      }, 50);
       return false;
     }
 
@@ -1118,7 +1116,6 @@
     const twRow = document.querySelector('tr[data-region="TW"]');
     if (twRow) {
       const cells = twRow.querySelectorAll('.shift-cell');
-      // 將第一週與第二週排滿日班 (連續 14 天工作)，踩踏七休一紅線
       cells[0].innerText = "D D D D D D D";
       cells[1].innerText = "D D D D D D D";
       performAudit(false);
@@ -1129,11 +1126,11 @@
   function showBlockModal(violations) {
     const list = document.getElementById('violationList');
     list.innerHTML = violations.map(v => `<li class="violation-item">${v}</li>`).join('');
-    document.getElementById('violationModal').classList.add('active');
+    document.getElementById('violationModal').style.display = 'flex';
   }
 
   function closeModal() {
-    document.getElementById('violationModal').classList.remove('active');
+    document.getElementById('violationModal').style.display = 'none';
   }
 
   function revertLastValid() {
@@ -1151,7 +1148,7 @@
   function saveSnapshot() {
     lastValidHtml = document.getElementById('rosterTbody').innerHTML;
     try {
-      localStorage.setItem('marine_roster_snapshot_fixed', lastValidHtml);
+      localStorage.setItem('marine_roster_snapshot_final', lastValidHtml);
     } catch (e) {}
   }
 
@@ -1191,7 +1188,7 @@
   }
 
   function resetDefaults() {
-    localStorage.removeItem('marine_roster_snapshot_fixed');
+    localStorage.removeItem('marine_roster_snapshot_final');
     location.reload();
   }
 
@@ -1209,7 +1206,7 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    localStorage.removeItem('marine_roster_snapshot_v3');
+    localStorage.clear();
     saveSnapshot();
     bindCellEvents();
     performAudit(true);
